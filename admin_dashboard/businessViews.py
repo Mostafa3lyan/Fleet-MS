@@ -113,7 +113,6 @@ def update_business(request, business_id):
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 
-
 @csrf_exempt
 def delete_business(request, business_id):
     if request.method == 'DELETE':
@@ -127,6 +126,30 @@ def delete_business(request, business_id):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
+@csrf_exempt
+def get_menu(request, id):
+    menu = menus.find_one({'_id': ObjectId(id)})
+    if not menu:
+        business = businesses.find_one({'_id': ObjectId(id)})
+        if business:
+            menu_id = business.get('menu')
+            menu = menus.find_one({'_id': ObjectId(menu_id)})
+    if menu:
+        menu_name = menu['name']
+        item_ids = menu['items']
+        menu_items = []
+        for item_id in item_ids:
+            item = products.find_one({'_id': ObjectId(item_id)})
+            if item:
+                menu_items.append(item)
+        response_data = {
+            'menu_name': menu_name,
+            'items': menu_items,
+        }
+        return JsonResponse(response_data, json_dumps_params={'default': json_util.default})
+    else:
+        response_data = {'error': 'Menu not found'}
+        return JsonResponse(response_data, status=404)
 
 @csrf_exempt
 def get_all_business_orders(request, business_id):

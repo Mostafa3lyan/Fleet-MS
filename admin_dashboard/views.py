@@ -1,16 +1,11 @@
-from cmath import *
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import requests
-import math
 from bson import json_util, ObjectId
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from datetime import datetime
-# from utilities.mongodb import *
 import pymongo
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -19,8 +14,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 
-client = pymongo.MongoClient(
-    'mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
+client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
 db = client['FleetManagementSystem']
 
 # Collections
@@ -131,12 +125,12 @@ def change_password(request):
         email = data.get('email')
         old_password = data.get('old_password')
         new_password = data.get('new_password')
-        customer_obj = customers.find_one({"email": email})
-        if not customer_obj:
+        user = users.find_one({"email": email})
+        if not user:
             return JsonResponse({'error': 'User with this email does not exist'})
-        if customer_obj.get('password') != old_password:
+        if user.get('password') != old_password:
             return JsonResponse({'error': 'Old password does not match'})
-        customers.update_one({"_id": customer_obj['_id']}, {
+        users.update_one({"_id": user['_id']}, {
                              "$set": {"password": new_password}})
         return JsonResponse({'message': 'Password updated successfully'})
     else:
@@ -162,16 +156,16 @@ def edit_account(request, user_id):
             "phone": phone,
             "address": address
         }
-        customer_obj = customers.find_one({"_id": ObjectId(user_id)})
-        if not customer_obj:
+        user = users.find_one({"_id": ObjectId(user_id)})
+        if not user:
             return JsonResponse({'error': 'User with this id does not exist'})
-        customers.update_one({"_id": customer_obj['_id']}, {'$set': new_data})
+        users.update_one({"_id": user['_id']}, {'$set': new_data})
         return JsonResponse({'message': 'Account updated successfully'})
     else:
-        customer_obj = customers.find_one({"_id": ObjectId(user_id)})
-        if not customer_obj:
+        user = users.find_one({"_id": ObjectId(user_id)})
+        if not user:
             return JsonResponse({'error': 'User with this id does not exist'})
-        context = {'customer': customer_obj}
+        context = {'user': user}
         return render(request, 'edit_account.html', context)
 
 

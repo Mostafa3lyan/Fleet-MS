@@ -11,7 +11,7 @@ urlpatterns = [
     path('cancel_order/<str:order_id>/', views.cancel_order, name='cancel_order'),
     path('get_order_details/<str:order_id>/', views.get_order_details, name='get_order_details'),
     path('view_orders_history/<str:business_id>/', views.view_orders_history, name='view_orders_history'),
-    path('view_business_reviews', views.view_business_reviews, name='view_business_reviews'),
+    path('view_business_reviews/<str:business_id>/', views.view_business_reviews, name='view_business_reviews'),
     path('add_comment_to_review', views.add_comment_to_review, name='add_comment_to_review'),
     
     

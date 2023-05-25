@@ -253,18 +253,19 @@ def cancel_order(request, order_id):
         # Find the order document with the given ID
         order = orders.find_one({'_id': ObjectId(order_id)})
         if not order:
-            return HttpResponse('Invalid order ID')
+            return JsonResponse({'error': 'Invalid order ID'})
 
         # Check if the order can be cancelled
-        if order.get('status') == ['pending' or "confirmed"]:
-            return HttpResponse('Cannot cancel order')
+        if order.get('status') not in ['pending', 'confirmed']:
+            return JsonResponse({'error': 'Cannot cancel order'})
 
         # Update the status and cancellation_reason attributes of the order document
-        orders.update_one({'_id': ObjectId(order_id)}, { '$set': {'status': 'cancelled', 'cancellation_reason': cancellation_reason}})
+        orders.update_one({'_id': ObjectId(order_id)}, {'$set': {'status': 'cancelled', 'cancellation_reason': cancellation_reason}})
 
-        return HttpResponse('Order cancelled successfully')
+        return JsonResponse({'message': 'Order cancelled successfully'})
     else:
-        return render(request, 'cancel_order.html', {'order_id': order_id})
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 @csrf_exempt
@@ -320,16 +321,14 @@ def view_orders_history(request, business_id):
 
 
 @csrf_exempt
-def view_business_reviews(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        business_id = ObjectId(data['business_id'])
+def view_business_reviews(request, business_id):
+    if request.method == 'GET':
         my_business_reviews = []
-        for review in business_reviews.find({"business_id": business_id}):
+        for review in business_reviews.find({"business_id": ObjectId(business_id)}):
             my_business_reviews.append(review)
         return JsonResponse({"reviews": json_util.dumps(my_business_reviews)})
     else:
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 

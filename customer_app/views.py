@@ -9,8 +9,8 @@ from bson.objectid import ObjectId
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from datetime import datetime
-# from utilities.mongodb import *
+from datetime import datetime , timedelta
+# from ..utilities.mongodb import *
 import pymongo
 
 
@@ -100,11 +100,11 @@ def change_password(request):
             return JsonResponse({'error': 'User with this email does not exist'})
         if customer_obj.get('password') != old_password:
             return JsonResponse({'error': 'Old password does not match'})
-        customers.update_one({"_id": customer_obj['_id']}, {
-                             "$set": {"password": new_password}})
+        customers.update_one({"_id": customer_obj['_id']}, {"$set": {"password": new_password}})
         return JsonResponse({'message': 'Password updated successfully'})
     else:
-        return render(request, 'update_password.html')
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 # function to edit customer account
 # expected to get document with the new data the user want to change from the frontend
@@ -132,11 +132,8 @@ def edit_account(request, user_id):
         customers.update_one({"_id": customer_obj['_id']}, {'$set': new_data})
         return JsonResponse({'message': 'Account updated successfully'})
     else:
-        customer_obj = customers.find_one({"_id": ObjectId(user_id)})
-        if not customer_obj:
-            return JsonResponse({'error': 'User with this id does not exist'})
-        context = {'customer': customer_obj}
-        return render(request, 'edit_account.html', context)
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 @csrf_exempt
@@ -147,6 +144,17 @@ def delete_account(request, user_id):
     else:
         customers.delete_one({"_id": customer["_id"]})
         return JsonResponse({'message': 'Account deleted successfully'})
+
+
+@csrf_exempt
+def browse_menus(request):
+    if request.method == 'GET':
+        menu_list = []
+        for menu in menus.find():
+            menu_list.append(json_util.loads(json_util.dumps(menu)))
+        return JsonResponse({"menu_list": json_util.dumps(menu_list)})
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 def get_product_details(request, menu_id):
@@ -188,16 +196,6 @@ def search_for_market(request, market_name):
 
     return JsonResponse(market, safe=False)
 
-
-@csrf_exempt
-def browse_menus(request):
-    if request.method == 'GET':
-        menu_list = []
-        for menu in menus.find():
-            menu_list.append(json_util.loads(json_util.dumps(menu)))
-        return JsonResponse({"menu_list": json_util.dumps(menu_list)})
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 @csrf_exempt
@@ -336,7 +334,7 @@ def checkout(request):
         # Find the user document with the given customer ID
         customer = customers.find_one({'_id': ObjectId(customer_id)})
         if not customer:
-            return HttpResponse('Invalid customer ID')
+            return JsonResponse({'error': 'Invalid customer ID'})
 
         # Get the cart items
         cart = customer.get('cart', [])
@@ -355,7 +353,7 @@ def checkout(request):
         # Get the pickup address from the business
         business = businesses.find_one({"_id": ObjectId(business_id)})
         if not business:
-            return HttpResponse('Invalid business ID')
+            return JsonResponse({'error': 'Invalid business ID'})
         pick_address = business.get("address")
 
         # Get the current date and time
@@ -375,38 +373,57 @@ def checkout(request):
         # Insert the order document into the orders collection
         result = orders.insert_one(order)
         if not result.inserted_id:
-            return HttpResponse('Failed to place order')
+            return JsonResponse({'error': 'Failed to place order'})
 
         # Clear the user's cart
         customers.update_one({'_id': ObjectId(customer_id)}, {'$set': {'cart': []}})
 
-        return HttpResponse('Order placed successfully')
+        return JsonResponse({'message': 'Order placed successfully'})
     else:
-        return render(request, 'place_order.html')
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 def calculate_cost(delivery_address, pick_address):
-    # use Google Maps API to get the latitude and longitude of the addresses
-    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={delivery_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
+    # Use Google Maps Directions API to get the route distance and duration with traffic for car driving
+    api_key = 'AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
+    url = f'https://maps.googleapis.com/maps/api/directions/json?origin={pick_address}&destination={delivery_address}&mode=driving&departure_time=now&traffic_model=best_guess&key={api_key}'
     response = requests.get(url)
-    delivery_location = response.json()['results'][0]['geometry']['location']
-    lat1, lon1 = delivery_location['lat'], delivery_location['lng']
+    data = response.json()
 
-    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={pick_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
-    response = requests.get(url)
-    pick_location = response.json()['results'][0]['geometry']['location']
-    lat2, lon2 = pick_location['lat'], pick_location['lng']
+    # Check if the API request was successful
+    if data['status'] != 'OK':
+        raise Exception('Failed to retrieve route information from Google Maps')
 
-    # calculate the distance between the two points using the haversine formula
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) \
-        * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    distance = 6371 * c
+    # Extract the distance in meters and convert it to kilometers
+    distance = data['routes'][0]['legs'][0]['distance']['value'] / 1000
 
+    # Calculate the cost based on the distance (assuming a rate of $5 per kilometer)
     cost = distance * 5
     return cost
+
+# def calculate_cost(delivery_address, pick_address):
+#     # use Google Maps API to get the latitude and longitude of the addresses
+#     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={delivery_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
+#     response = requests.get(url)
+#     delivery_location = response.json()['results'][0]['geometry']['location']
+#     lat1, lon1 = delivery_location['lat'], delivery_location['lng']
+
+#     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={pick_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
+#     response = requests.get(url)
+#     pick_location = response.json()['results'][0]['geometry']['location']
+#     lat2, lon2 = pick_location['lat'], pick_location['lng']
+
+#     # calculate the distance between the two points using the haversine formula
+#     dlat = math.radians(lat2 - lat1)
+#     dlon = math.radians(lon2 - lon1)
+#     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) \
+#         * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+#     distance = 6371 * c
+
+#     cost = distance * 5
+#     return cost
 
 
 # pick_order function : used if customer want to get order from external business that's not in our database
@@ -431,7 +448,12 @@ def pick_order(request):
 
             # Get the current date and time
             now = datetime.now()
+            
+            # Calculate the expected delivery time (1 hour from the current time)
+            expected_delivery_time = now + timedelta(hours=1)
+            
             cost = calculate_cost(delivery_address, pick_address)
+            
             # Create an order document
             order = {
                 'customer_id': customer_id,
@@ -441,6 +463,7 @@ def pick_order(request):
                 'delivery_address': delivery_address,
                 'pick_address': pick_address,
                 'pick_order_cost': cost,
+                'expected_delivery_time': expected_delivery_time.strftime('%Y-%m-%d %H:%M:%S')
             }
 
             # Insert the order document into the orders collection
@@ -457,6 +480,8 @@ def pick_order(request):
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
+
+
 @csrf_exempt
 def cancel_order(request, order_id):
     if request.method == 'POST':
@@ -467,18 +492,19 @@ def cancel_order(request, order_id):
         # Find the order document with the given ID
         order = orders.find_one({'_id': ObjectId(order_id)})
         if not order:
-            return HttpResponse('Invalid order ID')
+            return JsonResponse({'error': 'Invalid order ID'})
 
         # Check if the order can be cancelled
         if order.get('status') not in ['pending']:
-            return HttpResponse('Cannot cancel order')
+            return JsonResponse({'error': 'Cannot cancel order'})
 
         # Update the status and cancellation_reason attributes of the order document
         orders.update_one({'_id': ObjectId(order_id)}, { '$set': {'status': 'cancelled', 'cancellation_reason': cancellation_reason}})
 
-        return HttpResponse('Order cancelled successfully')
+        return JsonResponse({'message': 'Order cancelled successfully'})
     else:
-        return render(request, 'cancel_order.html', {'order_id': order_id})
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 def track_order(request, order_id):
@@ -498,6 +524,50 @@ def track_order(request, order_id):
     # then you need to view both on the map (all of this by google maps api)
     # This code returns a simple response with the map location
     return HttpResponse('Map location')
+
+
+# def track_order(request, order_id):
+#     # Find the order document with the given ID
+#     order = orders.find_one({'_id': ObjectId(order_id)})
+#     if not order:
+#         return JsonResponse({'error': 'Invalid order ID'})
+
+#     # Check if the order is in transit
+#     if order.get('status') != 'in transit':
+#         return JsonResponse({'error': 'Order is not in transit'})
+
+#     # Get the delivery address from the order document
+#     delivery_address = order.get('delivery_address')
+
+#     # Obtain the latitude and longitude of the delivery address using the Google Geocoding API
+#     geocoding_url = f'https://maps.googleapis.com/maps/api/geocode/json?address={delivery_address}&key=YOUR_API_KEY'
+#     response = requests.get(geocoding_url)
+#     if response.status_code != 200:
+#         return JsonResponse({'error': 'Failed to retrieve geolocation data'})
+
+#     geocoding_data = response.json()
+#     if geocoding_data['status'] != 'OK' or len(geocoding_data['results']) == 0:
+#         return JsonResponse({'error': 'Failed to retrieve geolocation data'})
+
+#     location = geocoding_data['results'][0]['geometry']['location']
+#     delivery_latitude = location['lat']
+#     delivery_longitude = location['lng']
+
+#     # Obtain the driver's current location (assuming you have access to it)
+#     driver_latitude = 37.7749
+#     driver_longitude = -122.4194
+
+#     # Prepare the response data
+#     response_data = {
+#         'delivery_address': delivery_address,
+#         'delivery_latitude': delivery_latitude,
+#         'delivery_longitude': delivery_longitude,
+#         'driver_latitude': driver_latitude,
+#         'driver_longitude': driver_longitude,
+#     }
+
+#     # Return the JSON response
+#     return JsonResponse(response_data)
 
 
 @csrf_exempt

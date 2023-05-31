@@ -1,6 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+import bcrypt
 from bson import json_util, ObjectId
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -18,6 +19,7 @@ client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsy
 db = client['FleetManagementSystem']
 
 # Collections
+admins = db["Admin"]
 users = db["User"]
 customers = db["Customer"]
 products = db["Item"]
@@ -30,20 +32,80 @@ business_reviews = db["business_reviews"]
 # Create your views here.
 
 
+
+@csrf_exempt
+def add_admin(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+        email = data.get('email')
+        phone = data.get('phone')
+        
+        if not username or not password or not confirm_password or not email:
+            return JsonResponse({'error': 'Missing required fields'})
+        
+        if password != confirm_password:
+            return JsonResponse({'error': 'Passwords do not match'})
+        
+        existing_admin = admins.find_one({'email': email})
+        if existing_admin:
+            return JsonResponse({'error': 'An admin with this email already exists'})
+        
+        # Hash and salt the password
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        
+        admin_data = {
+            'username': username,
+            'password': hashed_password.decode('utf-8'),  # Store the hashed password
+            'email': email,
+            'phone': phone,
+            'is_superuser': True,
+            'is_staff': True
+        }
+        
+        admins.insert_one(admin_data)
+        
+        return JsonResponse({'message': 'Admin account created successfully'})
+    else:
+        return JsonResponse({'error': 'Invalid request method'})
+
+
+
 @csrf_exempt
 def login(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         email = data.get('email')
         password = data.get('password')
-        user = customers.find_one({"email": email, "password": password})
+        
+        user = admins.find_one({"email": email})
         if user:
-            # User exists and password matches, redirect to home page
-            return JsonResponse(data, status=200)
-        else:
-            # User does not exist or password does not match, show error message
-            return JsonResponse({'success': False, 'message': 'Invalid email or password'})
+            stored_password = user.get('password')
+            # Compare the entered password with the stored hashed password
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+                # Passwords match, authentication successful
+                return JsonResponse({'success': True, 'message': 'Login successful'}, status=200)
+        
+        # User does not exist or password does not match
+        return JsonResponse({'success': False, 'message': 'Invalid email or password'}, status=401)
 
+
+
+# @csrf_exempt
+# def login(request):
+#     if request.method == 'POST':
+#         data = json.loads(request.body)
+#         email = data.get('email')
+#         password = data.get('password')
+#         user = Users.find_one({"email": email, "password": password})
+#         if user:
+#             # User exists and password matches, redirect to home page
+#             return JsonResponse(data, status=200)
+#         else:
+#             # User does not exist or password does not match, show error message
+#             return JsonResponse({'success': False, 'message': 'Invalid email or password'})
 
 @csrf_exempt
 def create_new_account(request):
@@ -120,7 +182,7 @@ def verify_account(request, uidb64, token):
 
 @csrf_exempt
 def change_password(request):
-    if request.method == 'POST':
+    if request.method == 'PUT':
         data = json.loads(request.body)
         email = data.get('email')
         old_password = data.get('old_password')
@@ -130,11 +192,10 @@ def change_password(request):
             return JsonResponse({'error': 'User with this email does not exist'})
         if user.get('password') != old_password:
             return JsonResponse({'error': 'Old password does not match'})
-        users.update_one({"_id": user['_id']}, {
-                             "$set": {"password": new_password}})
+        users.update_one({"_id": user['_id']}, {"$set": {"password": new_password}})
         return JsonResponse({'message': 'Password updated successfully'})
     else:
-        return render(request, 'update_password.html')
+        return JsonResponse({'error': 'Invalid request method'})
 
 # function to edit customer account
 # expected to get document with the new data the user want to change from the frontend
@@ -165,8 +226,7 @@ def edit_account(request, user_id):
         user = users.find_one({"_id": ObjectId(user_id)})
         if not user:
             return JsonResponse({'error': 'User with this id does not exist'})
-        context = {'user': user}
-        return render(request, 'edit_account.html', context)
+        return JsonResponse(user)
 
 
 @csrf_exempt

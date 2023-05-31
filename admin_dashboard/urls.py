@@ -33,6 +33,8 @@ urlpatterns = [
     
     
     #views
+    
+    path('add_admin', views.add_admin, name='add_admin'),
     path('login', views.login, name='login'),
     # path('createCustomer', views.createCustomer, name='createCustomer'),
     path('create_new_account', views.create_new_account, name='create_new_account'),

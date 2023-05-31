@@ -206,26 +206,35 @@ def add_item_to_cart(request):
         product_id = data.get('product_id')
         product_quantity = int(data.get('product_quantity'))
         business_id = data.get('business_id')
-        # Find the customer document with the given customer id
+
+        # Find the customer document with the given customer ID
         customer = customers.find_one({'_id': ObjectId(customer_id)})
         if not customer:
-            return JsonResponse({'success': False})
+            return JsonResponse({'success': False, 'error': 'Invalid customer ID'})
 
         # Find the product document with the given ID
         product = products.find_one({'_id': ObjectId(product_id)})
         if not product:
-            return JsonResponse({'success': False})
+            return JsonResponse({'success': False, 'error': 'Invalid product ID'})
 
-        # Add the product and quantity to the customer's cart
+        # Add the item details to the customer's cart
         cart = customer.get('cart', [])
         cart_item = {
-            'product_id': product['_id'], 'quantity': product_quantity , 'business_id': business_id }
+            'product_id': product_id,
+            'product_name': product.get('title'),
+            'quantity': product_quantity,
+            'business_id': business_id
+        }
         if cart_item not in cart:
             cart.append(cart_item)
-        customers.update_one({'_id': customer['_id']}, {
-                             '$set': {'cart': cart}})
+
+        # Update the customer's cart
+        customers.update_one({'_id': customer['_id']}, {'$set': {'cart': cart}})
 
         return JsonResponse({'success': True})
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+
 
 
 def edit_cart(request):
@@ -326,10 +335,9 @@ def clear_cart(request):
 @csrf_exempt
 def checkout(request):
     if request.method == 'POST':
-        # Get the customer ID and delivery address from the request POST data
+        # Get the customer ID from the request POST data
         data = json.loads(request.body)
         customer_id = data.get('customer_id')
-        delivery_address = data.get('delivery_address')
 
         # Find the user document with the given customer ID
         customer = customers.find_one({'_id': ObjectId(customer_id)})
@@ -340,7 +348,7 @@ def checkout(request):
         cart = customer.get('cart', [])
 
         # Calculate the total cost of the order
-        total_cost = 0
+        cost = 0
         business_id = None
         for item in cart:
             product_id = item['product_id']
@@ -348,7 +356,7 @@ def checkout(request):
             business_id = item["business_id"]
             product = products.find_one({'_id': ObjectId(product_id)})
             if product:
-                total_cost += quantity * float(product['price'])
+                cost += quantity * float(product['price'])
 
         # Get the pickup address from the business
         business = businesses.find_one({"_id": ObjectId(business_id)})
@@ -356,18 +364,30 @@ def checkout(request):
             return JsonResponse({'error': 'Invalid business ID'})
         pick_address = business.get("address")
 
+        # Check if the customer has provided a delivery address
+        delivery_address = customer.get('address')
+        if not delivery_address:
+            # Prompt the user to provide a delivery address
+            return JsonResponse({'error': 'Please provide a delivery address'})
+
+        total_cost = cost + calculate_cost(delivery_address, pick_address)
+
         # Get the current date and time
         now = datetime.now()
+
+        # Calculate the expected delivery time
+        delivery_time = now + timedelta(hours=1)  # Assuming a delivery time of 1 hours from the current time
 
         # Create an order document
         order = {
             'customer_id': customer_id,
             'items': cart,
-            'total_cost': total_cost,
             'status': 'pending',
-            'pickup_address': pick_address,
             'date': now.strftime('%Y-%m-%d %H:%M:%S'),
-            'delivery_address': delivery_address
+            'delivery_address': delivery_address,
+            'pickup_address': pick_address,
+            'total_cost': total_cost,
+            'expected_delivery_time': delivery_time.strftime('%Y-%m-%d %H:%M:%S')
         }
 
         # Insert the order document into the orders collection
@@ -381,6 +401,7 @@ def checkout(request):
         return JsonResponse({'message': 'Order placed successfully'})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 

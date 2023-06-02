@@ -29,40 +29,77 @@ vehicles = dbname["Vehicle"]
 
 
 
+
+
 @csrf_exempt
-def approve_driver(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        email = data.get('email')
-        driver = drivers.find_one({"email": email})
-        if driver:
-            # Driver already exists, show error message
-            return JsonResponse({'success': False, 'message': 'Driver with this email already exists'})
-        else:
-            # Insert the new driver and redirect to home page
-            user = users.find_one({"email": email})
-            if user:
-                driver_data = {
-                    'user_id': str(user.get('_id')),
-                    'name': user.get('name'),
-                    'email': email,
-                    'phone': user.get('phone'),
-                    "approved_at": datetime.now(),
-                    'status': 'available'
-                }
+def approve_driver(request, user_id):
+    if request.method == 'PUT':
+        # Find the driver document in the users collection
+        driver = users.find_one({"_id": ObjectId(user_id), "user_type": "driver"})
 
-                # Insert driver data into MongoDB
-                driver_id = drivers.insert_one(driver_data).inserted_id
+        if not driver:
+            return JsonResponse({'error': 'Driver not found.'}, status=404)
 
-                # Update user collection with driver ID
-                users.update_one({"_id": user.get('_id')}, {"$set": {"driver_id": str(driver_id)}})
+        # Check if the driver is already approved
+        if driver.get('approved', False):
+            return JsonResponse({'error': 'Driver is already approved.'}, status=400)
 
-                return JsonResponse({'message': 'Driver created successfully', 'id': str(driver_id)})
-            else:
-                # User with this email not found, show error message
-                return JsonResponse({'success': False, 'message': 'User with this email not found'})
+        # Update the driver document to mark it as approved
+        driver['approved'] = True
+        driver['approved_at'] = datetime.utcnow().isoformat()
+        
+        # Update the driver document in the users collection
+        users.update_one({"_id": ObjectId(user_id)}, {"$set": driver})
+
+        # Add the user_id to the driver document
+        driver['user_id'] = user_id
+        driver['status'] = 'available'
+
+        # Insert the driver document into the drivers collection
+        drivers.insert_one(driver)
+
+        return JsonResponse({'message': 'Driver approved.'}, status=200)
     else:
-        return HttpResponse('Invalid request method.')
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
+
+
+# @csrf_exempt
+# def approve_driver(request):
+#     if request.method == 'POST':
+#         data = json.loads(request.body)
+#         email = data.get('email')
+#         driver = drivers.find_one({"email": email})
+#         if driver:
+#             # Driver already exists, show error message
+#             return JsonResponse({'success': False, 'message': 'Driver with this email already exists'})
+#         else:
+#             # Insert the new driver and redirect to home page
+#             user = users.find_one({"email": email})
+#             if user:
+#                 driver_data = {
+#                     'user_id': str(user.get('_id')),
+#                     'name': user.get('name'),
+#                     'email': email,
+#                     'phone': user.get('phone'),
+#                     "approved_at": datetime.now(),
+#                     'status': 'available'
+#                 }
+
+#                 # Insert driver data into MongoDB
+#                 driver_id = drivers.insert_one(driver_data).inserted_id
+
+#                 # Update user collection with driver ID
+#                 users.update_one({"_id": user.get('_id')}, {"$set": {"driver_id": str(driver_id)}})
+
+#                 return JsonResponse({'message': 'Driver created successfully', 'id': str(driver_id)})
+#             else:
+#                 # User with this email not found, show error message
+#                 return JsonResponse({'success': False, 'message': 'User with this email not found'})
+#     else:
+#         return HttpResponse('Invalid request method.')
 
 
 @csrf_exempt
@@ -125,12 +162,46 @@ def get_vehicle_details(request, driver_id):
 
 
 
-
 @csrf_exempt
 def getAllDrivers(request):
     if request.method == 'GET':
         # Get the documents from the MongoDB collection
         data = drivers.find()
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def getAll_available_Drivers(request):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "available"
+        data = drivers.find({"status": "available"})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@csrf_exempt
+def getAll_Notavailable_Drivers(request):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "Not available"
+        data = drivers.find({"status": "Not available"})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@csrf_exempt
+def getAll_busy_Drivers(request):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "busy"
+        data = drivers.find({"status": "busy"})
         # Convert the ObjectId to a string for each document
         response_data = [json.loads(json_util.dumps(doc)) for doc in data]
         return JsonResponse(response_data, safe=False)

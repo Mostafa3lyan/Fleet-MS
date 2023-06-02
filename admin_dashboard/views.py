@@ -33,6 +33,51 @@ business_reviews = db["business_reviews"]
 
 
 
+
+@csrf_exempt
+def getAllUsers(request):
+    if request.method == 'GET':
+        # Get all documents from the 'User' collection
+        data = users.find()
+        # Convert the MongoDB documents to Python dictionaries and add them to a list
+        response_data = [user for user in data]
+        # Return the list of dictionaries as a JSON response
+        return JsonResponse(json_util.dumps(response_data), safe=False)
+    else:
+        # Return a 405 error for all other HTTP methods
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def getAll_business_Users(request):
+    if request.method == 'GET':
+        # Get all user documents with user_type "business" from the 'User' collection
+        users = db["User"]
+        data = users.find({"user_type": "business"})
+        # Convert the MongoDB documents to Python dictionaries and add them to a list
+        response_data = [user for user in data]
+        # Return the list of dictionaries as a JSON response
+        return JsonResponse(json_util.dumps(response_data), safe=False)
+    else:
+        # Return a 405 error for all other HTTP methods
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def getAll_driver_Users(request):
+    if request.method == 'GET':
+        # Get all user documents with user_type "driver" from the 'User' collection
+        users = db["User"]
+        data = users.find({"user_type": "driver"})
+        # Convert the MongoDB documents to Python dictionaries and add them to a list
+        response_data = [user for user in data]
+        # Return the list of dictionaries as a JSON response
+        return JsonResponse(json_util.dumps(response_data), safe=False)
+    else:
+        # Return a 405 error for all other HTTP methods
+        return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
 @csrf_exempt
 def add_admin(request):
     if request.method == 'POST':

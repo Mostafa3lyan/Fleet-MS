@@ -18,6 +18,7 @@ client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsy
 dbname = client['FleetManagementSystem']
 
 # Collections
+users = dbname["User"]
 customers = dbname["Customer"]
 drivers = dbname["Driver"]
 products = dbname["Item"]
@@ -32,6 +33,48 @@ vehicles = dbname["Vehicle"]
 # Not available : driver can view orders but can not accept orders
 # Available : driver can accept orders
 # busy : driver accepted order and order is In transit and driver can not be "Not available"
+
+
+
+
+@csrf_exempt
+def create_driver(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        phone = data.get('phone')
+        licence_id = data.get('licence_id')
+        email = data.get('email')
+        address = data.get('address')
+        password = data.get('password')
+
+        # Check if any of the fields are missing
+        if not all([first_name, last_name, phone, licence_id, email, address, password]):
+            return JsonResponse({'error': 'Missing fields.'}, status=400)
+
+        # Create the driver document
+        driver = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone": phone,
+            "licence_id": licence_id,
+            "email": email,
+            "password": password,
+            "address": address,
+            "user_type": "driver"
+        }
+
+        # Insert the driver document into the users collection
+        users.insert_one(driver)
+
+        return JsonResponse({'message': 'Driver created successfully.'}, status=201)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
+
 
 
 @csrf_exempt

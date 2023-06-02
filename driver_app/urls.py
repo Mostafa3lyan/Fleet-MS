@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    
+path('create_driver', views.create_driver, name='create_driver'),    
 path('add_vehicle/<str:driver_id>/', views.add_vehicle, name='add_vehicle'),
 path('update_vehicle/<str:driver_id>/', views.update_vehicle, name='update_vehicle'),
 path('change_status/<str:driver_id>/', views.change_status, name='change_status'),    

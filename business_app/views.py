@@ -6,7 +6,6 @@ import requests
 import math
 from bson import json_util
 from bson.objectid import ObjectId
-from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
@@ -21,6 +20,7 @@ client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsy
 dbname = client['FleetManagementSystem']
 
 # Collections
+users = dbname["User"]
 customers = dbname["Customer"]
 drivers = dbname["Driver"]
 products = dbname["Item"]
@@ -29,6 +29,56 @@ businesses = dbname["Business"]
 orders = dbname["Order"]
 business_reviews = dbname["business_reviews"]
 fs = gridfs.GridFS(dbname)
+
+
+
+
+@csrf_exempt
+def create_business(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        name = data.get('name')
+        phone = data.get('phone')
+        business_website = data.get('business_website')
+        email = data.get('email')
+        password = data.get('password')
+        address = data.get('address')
+        contact_name = data.get('contact_name')
+        postal_code = data.get('postal_code')
+        business_type = data.get('type')
+
+        # Check if any of the fields are missing
+        if not all([name, phone, email,password, address, contact_name, postal_code, business_type]):
+            return JsonResponse({'error': 'Missing fields.'}, status=400)
+        
+        # Check if the business type is valid
+        if business_type not in ['Market', 'Restaurant']:
+            return JsonResponse({'error': 'Invalid business type.'}, status=400)
+        
+        # Check if the business name already exists
+        if businesses.find_one({"name": name}):
+            return JsonResponse({'error': 'Business with the same name already exists.'}, status=400)
+        
+        # Create the business document
+        business = {
+            "name": name,
+            "phone": phone,
+            "business_website": business_website,
+            "email": email,
+            "password": password,
+            "address": address,
+            "contact_name": contact_name,
+            "postal_code": postal_code,
+            "type": business_type,
+            "user_type": "business"
+        }
+
+        # Insert the business document into the users collection
+        users.insert_one(business)
+
+        return JsonResponse({'message': 'Business added successfully.'}, status=201)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 
 

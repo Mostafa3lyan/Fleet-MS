@@ -1,0 +1,26 @@
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+
+
+
+export async function get_restaurants() {
+    console.log("API_URL", API_URL);
+    try {
+        const res = await fetch(`${API_URL}/map/get_all_restaurant`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+
+        const data = await res.json();
+        if (res.status === 200) {
+            return data;
+        } else {
+            return res.error
+        }
+    } catch(err) {
+        return {error: 'Something went wrong when retrieving restaurants'}
+    }
+};

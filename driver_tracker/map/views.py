@@ -148,7 +148,6 @@ def start_simulation(request):
     if request.method == 'POST':
         # Get the request data
         data = json.loads(request.body)
-        print(data)
         speed_dict = {"S":10, "R":1, "F":0.1}
         speed = data.get('speed')
         drivers_number = data.get('drivers_number')
@@ -164,7 +163,7 @@ def start_simulation(request):
         if not result:
             return JsonResponse({'error': 'Failed to start simulation'}, status=500)
 
-        return JsonResponse({'message': 'simulation started successfully', 'driver_id': str(result.inserted_id)}, status=201)
+        return JsonResponse({'message': 'simulation started successfully'}, status=201)
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 

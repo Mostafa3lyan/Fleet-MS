@@ -1,7 +1,6 @@
 import threading
 import time
 from .map_socket import sio
-
 #Function that runs the driver on a randomly generated route, driver moves until an order is given.
 class Driver_Thread(threading.Thread):
 
@@ -28,4 +27,4 @@ class Driver_Thread(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
-    
+

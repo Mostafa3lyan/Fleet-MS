@@ -4,13 +4,45 @@ import { Marker } from "react-google-maps";
 import { get_restaurants } from "../api/getResturent";
 import { get_orders } from "../api/getOrdres";
 import { get_drivers } from "../api/getDrivers";
+import DriverIconRed  from "../icons/driverRed.png";
+import DriverIconOrange  from "../icons/driverOrange.png";
+import DriverIconGreen  from "../icons/driverGreen.png";
+import { Icon } from "@mui/material";
 
   
 export default function Markers({setSelectedMarker, socket}) {
     const [Orders, setOrders] = useState([]);
     const [Restaurants, setRestaurants] = useState([]);
-    const [Drivers, setDrivers] = useState([]);
+    const [Drivers, setDrivers] = useState({});
     const [ActiveDrivers, setActiveDrivers] = useState({});
+    const [BusyDrivers, setBusyDrivers] = useState({});
+    const [NotAvailableDrivers, setNotAvailableDrivers] = useState({});
+
+
+
+    function getDriversMarkers(obj, DriverIcon){
+      const DriversMarkersArray = [];
+      Object.keys(obj).forEach(function(key, index) {
+        const driver = obj[key];
+        DriversMarkersArray.push(
+          <Marker
+            key={key}
+            position={{
+              lat: driver.lat,
+              lng: driver.lng
+            }}
+            onClick={() => {
+              setSelectedMarker(driver);
+            }}
+            icon={{
+              url: DriverIcon,
+              scaledSize: new window.google.maps.Size(30, 30)
+            }}
+          />
+        )
+      })
+      return DriversMarkersArray
+    }
 
 
     useEffect(() => {
@@ -37,14 +69,20 @@ export default function Markers({setSelectedMarker, socket}) {
         }));
       });
 
-      socket.on('setBusyDriver', (ActiveDriver) => {
-        console.log("setBusyDriver > ", ActiveDriver);
-
+      socket.on('setBusyDriver', (BusyDriver) => {
+        console.log("setBusyDriver > ", BusyDriver);
+        setBusyDrivers(Driver => ({
+          ...Driver,
+          ...BusyDriver
+        }));
       });
 
-      socket.on('setNotAvailableDriver', (ActiveDriver) => {
-        console.log("setNotAvailableDriver > ", ActiveDriver);
-
+      socket.on('setNotAvailableDriver', (NotAvailableDriver) => {
+        console.log("setNotAvailableDriver > ", NotAvailableDriver);
+        setNotAvailableDrivers(Driver => ({
+          ...Driver,
+          ...NotAvailableDriver
+        }));
       });
 
     }, []);
@@ -86,23 +124,41 @@ export default function Markers({setSelectedMarker, socket}) {
             }}
           />
         ))}
-
-        {Drivers.map(driver => (
-          <Marker
-            key={driver._id.$oid}
-            position={{
-              lat: driver.lat,
-              lng: driver.lng
-            }}
-            onClick={() => {
-              setSelectedMarker(driver);
-            }}
-            icon={{
-              url:  "https://img.icons8.com/fluency/48/delivery-scooter.png",
-              scaledSize: new window.google.maps.Size(30, 30)
-            }}
-          />
-        ))}
+        {
+        Object.keys(BusyDrivers).length > 0 ? 
+        (getDriversMarkers(BusyDrivers, DriverIconOrange))
+        :
+        ('')
+        }
+        {
+        Object.keys(ActiveDrivers).length > 0 ? 
+        (getDriversMarkers(ActiveDrivers, DriverIconRed))
+        :
+        ('')
+        }
+        {
+        Object.keys(NotAvailableDrivers).length > 0 ? 
+        (getDriversMarkers(NotAvailableDrivers, DriverIconRed))
+        :
+        ('')
+        }
       </>
     );
   }
+
+  // {ActiveDrivers.map(driver => (
+  //   <Marker
+  //     key={driver.number}
+  //     position={{
+  //       lat: driver.lat,
+  //       lng: driver.lng
+  //     }}
+  //     onClick={() => {
+  //       setSelectedMarker(driver);
+  //     }}
+  //     icon={{
+  //       url:  "https://img.icons8.com/fluency/48/delivery-scooter.png",
+  //       scaledSize: new window.google.maps.Size(30, 30)
+  //     }}
+  //   />
+  // ))}

@@ -18,5 +18,6 @@ urlpatterns = [
 
 
     path('start_simulation', start_simulation, name='start_simulation'),
+    path('assign_order', assign_order, name='assign_order'),
 
     ]

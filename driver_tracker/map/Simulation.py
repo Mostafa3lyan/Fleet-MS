@@ -12,7 +12,6 @@ import asyncio
 from multiprocessing import Process
 from .variables import arabic_male_names
 from utils.mongo_connection import drivers_collection, orders_collection, restaurant_collection
-from .SimulationStatic import SimulationClass
 
 
 gkey = 'AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
@@ -250,9 +249,9 @@ class Simulation:
     @classmethod
     def assign_order(cls):
         query = {"assigned":False}
-        projection = {"_id":0,"lat":1, "lng":1}
-        order_coordinates = orders_collection.find_one(query, projection)
-        order_location = (order_coordinates["lat"], order_coordinates["lng"])
+        projection = {"_id":0,"assigned":0}
+        order = orders_collection.find_one(query, projection)
+        order_location = (order["lat"], order["lng"])
         restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},projection)]
         nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
         
@@ -261,13 +260,15 @@ class Simulation:
         drivers = drivers_collection.find({"status":{"$in":["busy", "available"]}},{"_id":0})
         drivers_list = [driver for driver in drivers]
         best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
-        print("best_driver", best_driver)
+        print("best driver", best_driver)
+        best_driver.update({"order":order})
+        cls.update_driver(best_driver)
         if best_driver["status"] == "available":
             best_driver_location = (best_driver.get("lat"), best_driver.get("lng"))
             driver_to_resturent_route = cls.create_route(best_driver_location, None, nearest_resturent_location)
             cls.run_driver(driver_to_resturent_route, best_driver)
             cls.run_driver(resturent_to_order_route, best_driver)
-
+        
 
     @classmethod
     def get_best_driver(cls, resturent_location, drivers_list):
@@ -319,8 +320,3 @@ class Simulation:
 
         route_time = directions_result[0]['legs'][0]['duration']['value']
         return route_time
-    
-
-@sio.event
-async def assign_order(sid):
-    Simulation.assign_order()

@@ -24,6 +24,7 @@ export default function Markers({setSelectedMarker, socket}) {
       const DriversMarkersArray = [];
       Object.keys(obj).forEach(function(key, index) {
         const driver = obj[key];
+        console.log("driver", driver);
         DriversMarkersArray.push(
           <Marker
             key={key}
@@ -61,8 +62,7 @@ export default function Markers({setSelectedMarker, socket}) {
 
 
 
-      socket.on('UpdateActiveDriverLocation', (ActiveDriver) => {
-        console.log("UpdateActiveDriverLocation > ", ActiveDriver);
+      socket.on('setActiveDriver', (ActiveDriver) => {
         setActiveDrivers(Driver => ({
           ...Driver,
           ...ActiveDriver
@@ -70,7 +70,6 @@ export default function Markers({setSelectedMarker, socket}) {
       });
 
       socket.on('setBusyDriver', (BusyDriver) => {
-        console.log("setBusyDriver > ", BusyDriver);
         setBusyDrivers(Driver => ({
           ...Driver,
           ...BusyDriver
@@ -78,7 +77,6 @@ export default function Markers({setSelectedMarker, socket}) {
       });
 
       socket.on('setNotAvailableDriver', (NotAvailableDriver) => {
-        console.log("setNotAvailableDriver > ", NotAvailableDriver);
         setNotAvailableDrivers(Driver => ({
           ...Driver,
           ...NotAvailableDriver
@@ -132,7 +130,7 @@ export default function Markers({setSelectedMarker, socket}) {
         }
         {
         Object.keys(ActiveDrivers).length > 0 ? 
-        (getDriversMarkers(ActiveDrivers, DriverIconRed))
+        (getDriversMarkers(ActiveDrivers, DriverIconGreen))
         :
         ('')
         }

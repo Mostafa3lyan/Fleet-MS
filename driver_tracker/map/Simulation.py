@@ -2,124 +2,153 @@
 import polyline
 import googlemaps
 import time
+from datetime import datetime
 import random
 import threading
 import math
 import numpy as np
-from .driver_thread import Driver_Thread, sio
+from .map_socket import sio
 import asyncio
 from multiprocessing import Process
 from .variables import arabic_male_names
-from utils.mongo_connection import drivers_collection
+from utils.mongo_connection import drivers_collection, orders_collection, restaurant_collection
+from .SimulationStatic import SimulationClass
+
 
 gkey = 'AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
 gmaps = googlemaps.Client(key=gkey)
 
 class Simulation:
-    
-    def __init__(self, drivers_num, speed, restaurant_list):
-        self.center_lat = 30.1491
-        self.center_lon = 31.6290
-        self.radius = 6000
-        self.drivers_num = drivers_num
-        self.speed = speed
-        self.restaurant_list = restaurant_list
-        self.states = ['busy', 'available', 'not_available']
-        self.drivers_threads = {}
-        self.drivers = []
-        self.drivers_active = {}
-        self.busy_drivers = {}
-        self.not_available_drivers = {}
+    center_lat = 30.1491
+    center_lon = 31.6290
+    radius = 6000
+    drivers_num = 10
+    speed = 0.1
+    states = ['busy', 'available', 'not_available']
+    drivers_threads = {}
+    drivers = []
+    drivers_active = {}
+    not_available_drivers = {}
+    busy_drivers = {}
 
-    def start(self):
-        random_location = self.generate_random_location()
-        destination = self.generate_random_location()
-        route = self.create_route(random_location, None, destination)
-        return route
     
-    def create_drivers(self):
-        for i in range(1, self.drivers_num+1):
+    @classmethod
+    def start(cls, drivers_num, speed):
+        cls.drivers_num = drivers_num
+        cls.speed = speed
+        for i in range(1, cls.drivers_num+1):
             driver_num = "driver{}_marker".format(i)
             
             driver_thread_num = "driver{}_thread".format(i)
 
-            driver = self.generate_random_location()
-            driver_val, driver_thread_val = self.driver_state(driver, i)
+            driver = cls.generate_random_location()
+            driver_val, driver_thread_val = cls.driver_state(driver, i)
             
-            self.drivers.append((driver_num, driver_val))
-            self.drivers_threads[driver_thread_num] = driver_thread_val
+            cls.drivers.append((driver_num, driver_val))
+            cls.drivers_threads[driver_thread_num] = driver_thread_val
         return {"success": "drivers created successfully"}
 
     #Driver movment before order selection function.
-    def driver_state(self, driver, num):
-        gen_states = random.choice(self.states)
-        destination = self.generate_random_location()
-        route = self.create_route(driver, None, destination)
-        driver_name = self.generate_random_name()
-        driver_obj =  self.create_driver_db(
+    @classmethod
+    def driver_state(cls, driver, num):
+        if int(cls.drivers_num/2) < num:
+            gen_states = random.choice([cls.states[0], cls.states[2]])
+        else:
+            gen_states = cls.states[1]
+            
+        destination = cls.generate_random_location()
+        route = cls.create_route(driver, None, destination)
+        driver_name = cls.generate_random_name()
+        driver_order = cls.generate_random_order(destination, gen_states)
+        driver_obj =  cls.create_or_update_driver_db(
             driver_name,
             gen_states,
             driver[0],
             driver[1],
-            num
+            num,
+            driver_order
             )
 
-        if gen_states in self.states:
-            process_1 = Process(target=self.sio_emit, args=("setBusyDriver", driver_obj))
-            process_1.start()
-            process_2 = Process(target=self.run_random_driver, args=(route, num))
-            process_2.start()
+        if gen_states == cls.states[0]:
+            process = Process(target=cls.run_driver, args=(route, driver_obj))
+            process.start()
             return driver, None
 
-        elif gen_states == self.states[1]:
-            process = Process(target=self.sio_emit, args=("UpdateActiveDriverLocation", driver_obj))
+        elif gen_states == cls.states[1]:
+            process = Process(target=cls.sio_emit, args=("setActiveDriver", {num:driver_obj}))
             process.start()
             return driver, None
         
-        elif gen_states == self.states[2]:
-            process = Process(target=self.sio_emit, args=("setNotAvailableDriver", driver_obj))
+        elif gen_states == cls.states[2]:
+            process = Process(target=cls.sio_emit, args=("setNotAvailableDriver", {num:driver_obj}))
             process.start()
             return driver, None
         
-    def run_random_driver(self, route, driver_number):
-        self.update_driver_status("busy")
-        for j in range(1, len(route)-1):  
-            driver_num = str(driver_number) 
+    @classmethod
+    def run_driver(cls, route, driver_obj):
+        driver_num = driver_obj["number"]
+        cls.update_driver_status(driver_num, "busy")
+        for j in range(1, len(route)-1):
             location = route[j + 1]
-            process = Process(target=self.sio_emit, args=("updateBusyDriver",{driver_num:location}))
+            driver_obj["lat"] = location[0]
+            driver_obj["lng"] = location[1]
+            print("driver >>>> ", driver_obj)
+            process = Process(target=cls.sio_emit, args=("setBusyDriver",{driver_num:driver_obj}))
             process.start()
-            time.sleep(self.speed)
-        self.update_driver_location(driver_num, location[0], location[1])
+            time.sleep(cls.speed)
+            cls.update_driver_location(driver_num, location[0], location[1])
+        cls.update_driver_status(driver_num, "available")
+        process = Process(target=cls.sio_emit, args=("setActiveDriver",{driver_num:driver_obj}))
 
-    def create_driver_db(self, name, status, lat, lng, num):
+    @classmethod
+    def create_or_update_driver_db(cls, name, status, lat, lng, num, order, next_order=[]):
         driver_obj = {
             "name": name,
             "number": num,
             "status": status,
             "lat": lat,
-            "lng": lng
+            "lng": lng,
+            "order": order,
+            "next_order": next_order
         }
-        result = drivers_collection.insert_one(driver_obj)
+        driver = drivers_collection.find_one({"number":num})
+        if driver :
+            return cls.update_driver(driver_obj)
+        return cls.create_driver(driver_obj)
+    
+    @classmethod
+    def create_driver(cls, driver_obj):
+        drivers_collection.insert_one(driver_obj)
+        driver_obj.pop('_id', None)
         return driver_obj
-    def update_driver_location(self, num, lat, lng):
+
+    @classmethod
+    def update_driver(cls, driver_obj):
+        drivers_collection.update_one({"number":driver_obj["number"]},{"$set":driver_obj})
+        driver_obj.pop('_id', None)
+        return driver_obj
+    
+    @classmethod
+    def update_driver_location(cls, num, lat, lng):
         updated_data = {
             "lat": lat,
             "lng": lng
         }
         drivers_collection.update_one({"number": num}, {'$set': updated_data})
 
-    def update_driver_status(self, num, status):
+    @classmethod
+    def update_driver_status(cls, num, status):
         drivers_collection.update_one({"number": num}, {'$set': {"status": status}})
-    
-    def sio_emit(self, event, args):
+
+    @classmethod
+    def sio_emit(cls, event, args):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         async_result = loop.run_until_complete(sio.emit(event, args))
-        print("async_result = ", async_result)
-
 
     #Function to create a route, takes origin, waypoints and destination as args, and modifies the route to make it more accurate in the simulation, returns list with tuples full of corrdinates for a route.
-    def create_route(self, orgn, wayp, dest):
+    @classmethod
+    def create_route(cls, orgn, wayp, dest):
 
         directions_result = gmaps.directions(origin=orgn,
                                             waypoints= wayp,
@@ -128,7 +157,7 @@ class Simulation:
         ply_points = directions_result[0]['overview_polyline']['points']
         route = polyline.decode(ply_points)
 
-        threshold = self.convert_kmh(40)
+        threshold = cls.convert_kmh(40)
         adjusted_route = []
 
         num_points = len(route)
@@ -138,7 +167,7 @@ class Simulation:
             next_coord = route[i + 1]
             adjusted_route.append(current_coord)
             
-            distance = self.calculate_distance(current_coord, next_coord)
+            distance = cls.calculate_distance(current_coord, next_coord)
             
             if distance > threshold:
                 num_intermediate_points = math.ceil(distance / threshold)
@@ -155,13 +184,15 @@ class Simulation:
         return adjusted_route
 
     #Convert speeds from KM/H to KM/S
-    def convert_kmh(self, speed):
+    @classmethod
+    def convert_kmh(cls, speed):
         factor = 3600
         conv_speed = speed / factor
         return conv_speed
 
     #Function to calculate the distance between 2 coords.
-    def calculate_distance(self, coord1, coord2):
+    @classmethod
+    def calculate_distance(cls, coord1, coord2):
         
         R = 6371.0
         
@@ -183,12 +214,13 @@ class Simulation:
         return distance
     
     #Function to generate a random location in a given radius.
-    def generate_random_location(self):
+    @classmethod
+    def generate_random_location(cls):
         bearing = np.radians(np.random.uniform(0, 360))
-        distance = np.random.uniform(0, self.radius)
+        distance = np.random.uniform(0, cls.radius)
 
-        lat1 = np.radians(self.center_lat)
-        lon1 = np.radians(self.center_lon)
+        lat1 = np.radians(cls.center_lat)
+        lon1 = np.radians(cls.center_lon)
         lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / 6371000) +
                         np.cos(lat1) * np.sin(distance / 6371000) * np.cos(bearing))
         lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / 6371000) * np.cos(lat1),
@@ -199,7 +231,96 @@ class Simulation:
         
         return lat2, lon2
 
-    def generate_random_name(self):
+    @classmethod
+    def generate_random_name(cls):
         first_name = random.choice(arabic_male_names)
         last_name = random.choice(arabic_male_names)
         return first_name + ' ' + last_name
+
+    @classmethod
+    def generate_random_order(cls, location, gen_states):
+        if gen_states == "busy" : return {
+            "address": "random address",
+            "detail": "random details",
+            "lat": location[0],
+            "lng": location[1],
+        }
+        return {}
+
+    @classmethod
+    def assign_order(cls):
+        query = {"assigned":False}
+        projection = {"_id":0,"lat":1, "lng":1}
+        order_coordinates = orders_collection.find_one(query, projection)
+        order_location = (order_coordinates["lat"], order_coordinates["lng"])
+        restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},projection)]
+        nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
+        
+        resturent_to_order_route = cls.create_route(nearest_resturent_location, None, order_location)
+        
+        drivers = drivers_collection.find({"status":{"$in":["busy", "available"]}},{"_id":0})
+        drivers_list = [driver for driver in drivers]
+        best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
+        print("best_driver", best_driver)
+        if best_driver["status"] == "available":
+            best_driver_location = (best_driver.get("lat"), best_driver.get("lng"))
+            driver_to_resturent_route = cls.create_route(best_driver_location, None, nearest_resturent_location)
+            cls.run_driver(driver_to_resturent_route, best_driver)
+            cls.run_driver(resturent_to_order_route, best_driver)
+
+
+    @classmethod
+    def get_best_driver(cls, resturent_location, drivers_list):
+        best_driver = None
+        smalest_time = float('inf')
+        for driver in drivers_list:
+            if driver["status"] == "busy":
+                driver_time = cls.get_busy_driver_time(driver, resturent_location)
+            else:
+                driver_time = cls.get_available_driver_time(driver, resturent_location)
+            if driver_time < smalest_time :
+                smalest_time = driver_time
+                best_driver = driver
+        return best_driver
+
+    @classmethod 
+    def get_busy_driver_time(cls, driver, next_destination):
+        order = driver.get("order")
+        current_destination = (order.get("lat"), order.get("lat"))
+        current_location = (driver.get("lat"), driver.get("lng"))
+        time_left = cls.get_distance_time(current_location, current_destination)
+        time_between_distinations = cls.get_distance_time(current_destination, next_destination)
+        return time_left + time_between_distinations
+    
+    
+    @classmethod 
+    def get_available_driver_time(cls, driver, destination):
+        current_location = (driver.get("lat"), driver.get("lng"))
+        time_left = cls.get_distance_time(current_location, destination)
+        return time_left
+
+
+    @classmethod
+    def get_nearest_location(cls, location, location_list):
+        nearest_location = []
+        smalest_time = float('inf')
+        for destination in location_list:
+            route_time = cls.get_distance_time(location, destination)
+            if route_time < smalest_time:
+                smalest_time = route_time
+                nearest_location = destination
+        return nearest_location
+            
+    @classmethod
+    def get_distance_time(cls, location, destination):
+        directions_result = gmaps.directions(origin=location,
+                                            destination=destination,
+                                            mode='driving')
+
+        route_time = directions_result[0]['legs'][0]['duration']['value']
+        return route_time
+    
+
+@sio.event
+async def assign_order(sid):
+    Simulation.assign_order()

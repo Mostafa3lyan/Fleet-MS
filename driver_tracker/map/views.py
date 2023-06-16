@@ -157,8 +157,7 @@ def start_simulation(request):
 
 
 
-        sim = Simulation(int(drivers_number), speed_float, [30.169933760292054, 31.60212133655109])
-        result = sim.create_drivers()
+        result = Simulation.start(int(drivers_number), speed_float)
 
         if not result:
             return JsonResponse({'error': 'Failed to start simulation'}, status=500)

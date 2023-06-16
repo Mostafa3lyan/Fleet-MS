@@ -18,7 +18,6 @@ application = get_asgi_application()
 
 # its important to make all other imports below this comment
 import socketio
-from map.map_socket import sio
-
+from map.Simulation import *
 
 application = socketio.ASGIApp(sio, application)

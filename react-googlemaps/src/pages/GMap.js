@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import Button from '@mui/material/Button';
 import {
     withScriptjs,
     withGoogleMap,
@@ -10,7 +11,6 @@ import {
 import Markers from "../components/Markers";
 import SimDialog from "../components/SimModal";
 import { io } from 'socket.io-client';
-
 
 const socket = io(process.env.REACT_APP_SOCKET_URL, {
   path: process.env.REACT_APP_SOCKET_PATH
@@ -30,8 +30,6 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
   
       socket.on('connect', onConnect);
       socket.on('disconnect', onDisconnect);
-
-
 
 
       const listener = e => {
@@ -76,16 +74,6 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
             </div>
           </InfoWindow>
         )}
-          <Polyline
-          path={[
-            { lat: 30.1491, lng: 31.6290}, 
-            { lat: 30.148840230963152, lng: 31.707267157388696},
-            { lat: 30.16489296595274, lng: 31.707267157388696}
-          ]}
-          options={{
-            strokeColor: '#669Df6',
-          }}
-          />
 
       </GoogleMap>
       
@@ -95,9 +83,20 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
   const MapWrapped = withScriptjs(withGoogleMap(Map));
   
   export default function MainMap() {
+
+    function assignOrderHandler(){
+      console.log("Assigning order handler clicked");
+      socket.emit('assign_order')        
+    }
+
     return (
       <div>
       <SimDialog socket={socket}/>
+      <Button
+      onClick={assignOrderHandler}
+      >
+        Assign Order
+      </Button>
       <div style={{ width: "97vw", height: "100vh" }}>
         <MapWrapped
           googleMapURL={`https://maps.googleapis.com/maps/api/js?key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA&v=3.exp&libraries=geometry,drawing,places}`}

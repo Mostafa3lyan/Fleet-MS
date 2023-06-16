@@ -24,7 +24,6 @@ export default function SimDialog({socket}) {
   const [Speed, setSpeed] = React.useState('R');
 
   const handleClickOpen = () => {
-    console.log("clicked >>>>>>>>>>>>> ")
     socket.emit('print_message', "hello from socket" ,(result) => {
       console.log("result", result)
     });

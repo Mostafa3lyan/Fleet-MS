@@ -23,7 +23,6 @@ async def connect(sid, env):
 # listening to a 'message' event from the client
 @sio.event
 async def print_message(sid, data):
-    print("sid, data", sid, data)
     await sio.emit("new_message")
     return "welcome back from server"
 

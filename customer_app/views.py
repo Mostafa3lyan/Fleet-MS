@@ -28,17 +28,18 @@ orders = db["Order"]
 business_reviews = db["business_reviews"]
 
 
-@csrf_exempt
-def createCustomer(request):
-    if request.method == 'POST':
-        # Get the incoming data from the request
-        data = json.loads(request.body)
-        # Insert the document into the MongoDB collection
-        result = customers.insert_one(data)
-        # Return a JSON response with the inserted document ID
-        return JsonResponse({'id': str(result.inserted_id)})
-    else:
-        return JsonResponse(status=405)
+# @csrf_exempt
+# def createCustomer(request):
+#     if request.method == 'POST':
+#         # Get the incoming data from the request
+#         data = json.loads(request.body)
+#         # Insert the document into the MongoDB collection
+#         result = customers.insert_one(data)
+#         # Return a JSON response with the inserted document ID
+#         return JsonResponse({'id': str(result.inserted_id)})
+#     else:
+#         return JsonResponse(status=405)
+
 
 
 @csrf_exempt
@@ -47,45 +48,49 @@ def login(request):
         data = json.loads(request.body)
         email = data.get('email')
         password = data.get('password')
-        user = customers.find_one({"email": email, "password": password})
-        if user:
-            # User exists and password matches, redirect to home page
-            return JsonResponse(data, status=200)
+        customer = customers.find_one({"email": email})
+        if customer and customer['password'] == password:
+            # customer exists and password matches, return success response
+            return JsonResponse({'success': True, 'message': 'Login successful'})
         else:
-            # User does not exist or password does not match, show error message
-            return JsonResponse({'success': False, 'message': 'Invalid email or password'})
+            # customer does not exist or password does not match, return error response
+            return JsonResponse({'success': False, 'message': 'Invalid email or password'}, status=401)
+    else:
+        # Invalid request method
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 @csrf_exempt
 def create_new_account(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        name = data.get('name')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
         password = data.get('password')
+        confirm_password = data.get('confirm_password')
         email = data.get('email')
         phone = data.get('phone')
         address = data.get('address')
         if customers.find_one({"email": email}):
             # User already exists, show error message
-            # messages.error(request, 'User with this email already exists')
-            return JsonResponse({'success': False, 'message': 'User with this email already exists'})
-            # return JsonResponse(name, status=402)
+            return JsonResponse({'success': False, 'message': 'User with this email already exists'}, status=400)
         else:
-            # Insert the new user and redirect to home page
+            # Insert the new user and return the inserted ID
             customer = {
-                "name": name,
+                "first_name": first_name,
+                "last_name": last_name,
                 "password": password,
+                "confirm_password": confirm_password,
                 "email": email,
                 "phone": phone,
                 "address": address
             }
-           # customers.insert_one(customer)
-            result = customers.insert_one(data)
-            return JsonResponse({'id': str(result.inserted_id)})
-            # messages.success(request, 'Account created successfully')
-           # return JsonResponse(name, status=200)
+            result = customers.insert_one(customer)
+            return JsonResponse({'success': True, 'id': str(result.inserted_id)})
     else:
-        return JsonResponse(name, status=400)
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 @csrf_exempt

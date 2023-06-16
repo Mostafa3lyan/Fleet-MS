@@ -53,7 +53,7 @@ def create_business(request):
         
         # Check if the business type is valid
         if business_type not in ['Market', 'Restaurant']:
-            return JsonResponse({'error': 'Invalid business type.'}, status=400)
+            return JsonResponse({'error': 'Invalid business type. business must be Market or Restaurant '}, status=400)
         
         # Check if the business name already exists
         if businesses.find_one({"name": name}):
@@ -80,6 +80,23 @@ def create_business(request):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
+
+@csrf_exempt
+def login(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        email = data.get('email')
+        password = data.get('password')
+        business = businesses.find_one({"email": email})
+        if business and business['password'] == password:
+            # business exists and password matches, return success response
+            return JsonResponse({'success': True, 'message': 'Login successful'})
+        else:
+            # business does not exist or password does not match, return error response
+            return JsonResponse({'success': False, 'message': 'Invalid email or password'}, status=401)
+    else:
+        # Invalid request method
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 # @csrf_exempt
@@ -111,17 +128,18 @@ def create_business(request):
 @csrf_exempt
 def add_item(request):
     if request.method == 'POST':
-        data = json.loads(request.body) 
-        menu_id = data.get('menu_id')
-        title = data.get('title')
-        price = data.get('price')
-        category = data.get('category')
-        description = data.get('description')
-        available = data.get('available')
+        #data = json.loads(request.body) 
+        menu_id = request.POST.get('menu_id')
+        title = request.POST.get('title')
+        price = request.POST.get('price')
+        category = request.POST.get('category')
+        description = request.POST.get('description')
+        available = request.POST.get('available')
         
         # Get the uploaded image from the request
         image = request.FILES.get('image')
         
+        print(image)
         if image:
             # Open the image using PIL and convert it to JPEG format
             img = Image.open(io.BytesIO(image.read()))
@@ -163,6 +181,8 @@ def add_item(request):
 def get_item(request, item_id):
     if request.method == 'GET':
         item = products.find_one({"_id": ObjectId(item_id)})
+        image = fs.get(item.image_id)
+        
         if item:
             return JsonResponse(json.loads(json_util.dumps(item)), safe=False)
         else:

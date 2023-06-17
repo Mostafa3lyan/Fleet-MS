@@ -51,7 +51,7 @@ def login(request):
         customer = customers.find_one({"email": email})
         if customer and customer['password'] == password:
             # customer exists and password matches, return success response
-            return JsonResponse({'success': True, 'message': 'Login successful'})
+            return JsonResponse({'success': True, 'customer_id': str(customer['_id']), 'message': 'Login successful'})
         else:
             # customer does not exist or password does not match, return error response
             return JsonResponse({'success': False, 'message': 'Invalid email or password'}, status=401)
@@ -203,40 +203,45 @@ def search_for_market(request, market_name):
 
 
 
+
 @csrf_exempt
-def add_item_to_cart(request):
+def add_item_to_cart(request, customer_id):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        customer_id = data.get('customer_id')
-        product_id = data.get('product_id')
-        product_quantity = int(data.get('product_quantity'))
-        business_id = data.get('business_id')
+        try:
+            data = json.loads(request.body)
+            product_id = data.get('product_id')
+            product_quantity = int(data.get('product_quantity'))
+            business_id = data.get('business_id')
 
-        # Find the customer document with the given customer ID
-        customer = customers.find_one({'_id': ObjectId(customer_id)})
-        if not customer:
-            return JsonResponse({'success': False, 'error': 'Invalid customer ID'})
+            # Find the customer document with the given customer ID
+            customer = customers.find_one({'_id': ObjectId(customer_id)})
+            if not customer:
+                return JsonResponse({'success': False, 'error': 'Invalid customer ID'})
 
-        # Find the product document with the given ID
-        product = products.find_one({'_id': ObjectId(product_id)})
-        if not product:
-            return JsonResponse({'success': False, 'error': 'Invalid product ID'})
+            # Find the product document with the given ID
+            product = products.find_one({'_id': ObjectId(product_id)})
+            if not product:
+                return JsonResponse({'success': False, 'error': 'Invalid product ID'})
 
-        # Add the item details to the customer's cart
-        cart = customer.get('cart', [])
-        cart_item = {
-            'product_id': product_id,
-            'product_name': product.get('title'),
-            'quantity': product_quantity,
-            'business_id': business_id
-        }
-        if cart_item not in cart:
-            cart.append(cart_item)
+            # Add the item details to the customer's cart
+            cart = customer.get('cart', [])
+            cart_item = {
+                'product_id': product_id,
+                'product_name': product.get('title'),
+                'quantity': product_quantity,
+                'business_id': business_id
+            }
+            if cart_item not in cart:
+                cart.append(cart_item)
 
-        # Update the customer's cart
-        customers.update_one({'_id': customer['_id']}, {'$set': {'cart': cart}})
+            # Update the customer's cart
+            customers.update_one({'_id': ObjectId(customer_id)}, {'$set': {'cart': cart}})
 
-        return JsonResponse({'success': True})
+            return JsonResponse({'success': "item added to cart" })
+        except (ValueError, TypeError) as e:
+            return JsonResponse({'success': False, 'error': 'Invalid request data'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
 
@@ -367,7 +372,7 @@ def checkout(request):
         business = businesses.find_one({"_id": ObjectId(business_id)})
         if not business:
             return JsonResponse({'error': 'Invalid business ID'})
-        pick_address = business.get("address")
+        pickup_address = business.get("address")
 
         # Check if the customer has provided a delivery address
         delivery_address = customer.get('address')
@@ -375,13 +380,14 @@ def checkout(request):
             # Prompt the user to provide a delivery address
             return JsonResponse({'error': 'Please provide a delivery address'})
 
-        total_cost = cost + calculate_cost(delivery_address, pick_address)
+        delivery_cost = calculate_cost(delivery_address, pickup_address)
+        total_cost = cost + delivery_cost
 
         # Get the current date and time
         now = datetime.now()
 
         # Calculate the expected delivery time
-        delivery_time = now + timedelta(hours=1)  # Assuming a delivery time of 1 hours from the current time
+        delivery_time = now + timedelta(hours=1)  # Assuming a delivery time of 1 hour from the current time
 
         # Create an order document
         order = {
@@ -390,9 +396,12 @@ def checkout(request):
             'status': 'pending',
             'date': now.strftime('%Y-%m-%d %H:%M:%S'),
             'delivery_address': delivery_address,
-            'pickup_address': pick_address,
+            'pickup_address': pickup_address,
+            'cost': cost,
+            'delivery_cost': delivery_cost,
             'total_cost': total_cost,
-            'expected_delivery_time': delivery_time.strftime('%Y-%m-%d %H:%M:%S')
+            'expected_delivery_time': delivery_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'business_id': business_id,
         }
 
         # Insert the order document into the orders collection
@@ -406,6 +415,7 @@ def checkout(request):
         return JsonResponse({'message': 'Order placed successfully'})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 
@@ -488,7 +498,7 @@ def pick_order(request):
                 'date': now.strftime('%Y-%m-%d %H:%M:%S'),
                 'delivery_address': delivery_address,
                 'pick_address': pick_address,
-                'pick_order_cost': cost,
+                'delivery_cost': cost,
                 'expected_delivery_time': expected_delivery_time.strftime('%Y-%m-%d %H:%M:%S')
             }
 

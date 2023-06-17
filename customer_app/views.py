@@ -121,23 +121,27 @@ def change_password(request):
 def edit_account(request, user_id):
     if request.method == 'PATCH':
         data = json.loads(request.body)
-        name = data.get('name')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
         email = data.get('email')
         phone = data.get('phone')
         address = data.get('address')
         new_data = {
-            "name": name,
+            "first_name": first_name,
+            "last_name": last_name,
             "email": email,
             "phone": phone,
             "address": address
         }
         customer_obj = customers.find_one({"_id": ObjectId(user_id)})
         if not customer_obj:
-            return JsonResponse({'error': 'User with this id does not exist'})
+            return JsonResponse({'error': 'User with this ID does not exist'})
+
         customers.update_one({"_id": customer_obj['_id']}, {'$set': new_data})
         return JsonResponse({'message': 'Account updated successfully'})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 
@@ -149,6 +153,35 @@ def delete_account(request, user_id):
     else:
         customers.delete_one({"_id": customer["_id"]})
         return JsonResponse({'message': 'Account deleted successfully'})
+
+
+
+
+@csrf_exempt
+def view_orders_history(request, customer_id):
+    if request.method == 'GET':
+        customer = customers.find_one({'_id': ObjectId(customer_id)})
+        if not customer:
+            return JsonResponse({'error': 'Invalid customer ID'})
+
+        customer_orders = orders.find({'customer_id': customer_id})
+        orders_details = []
+        for order in customer_orders:
+            order_details = {
+                'order_id': str(order['_id']),
+                'date': order['date'],
+                'total_cost': order.get('total_cost', 0),
+                'status': order['status']
+            }
+            orders_details.append(order_details)
+
+        return JsonResponse({'orders': orders_details})
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
 
 
 @csrf_exempt

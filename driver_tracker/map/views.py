@@ -170,7 +170,11 @@ def start_simulation(request):
 @csrf_exempt
 def assign_order(request):
     if request.method == 'POST':
-        Simulation.assign_order()
+
+        result = Simulation.assign_order()
+        if not result:
+            return JsonResponse({'error': 'assign_order'}, status=500)
+    
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
     return JsonResponse({'message': 'order assign successfully'}, status=201)

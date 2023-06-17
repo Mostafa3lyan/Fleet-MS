@@ -87,17 +87,38 @@ class Simulation:
     def run_driver(cls, route, driver_obj):
         driver_num = driver_obj["number"]
         cls.update_driver_status(driver_num, "busy")
+        set_driver = Process(target=cls.sio_emit, args=("setBusyDriver",{driver_num:driver_obj}))
+        set_driver.start() 
         for j in range(1, len(route)-1):
             location = route[j + 1]
             driver_obj["lat"] = location[0]
             driver_obj["lng"] = location[1]
             print("driver >>>> ", driver_obj)
-            process = Process(target=cls.sio_emit, args=("setBusyDriver",{driver_num:driver_obj}))
+            updated_value = {
+                "number":driver_num,
+                "lat": location[0],
+                "lng": location[1],
+            }
+            # process = Process(target=cls.sio_emit, args=("setBusyDriver",{driver_num:driver_obj}))
+            process = Process(target=cls.sio_emit, args=("updateBusyDriverLocation", updated_value))
             process.start()
             time.sleep(cls.speed)
             cls.update_driver_location(driver_num, location[0], location[1])
+        next_order = cls.get_driver_next_order(driver_num)
+        if next_order :
+            order_location = (next_order["lat"], next_order["lng"])
+            driver_location = (driver_obj["lat"], driver_obj["lng"])
+            next_route = cls.create_route(order_location, None, driver_location)
+            driver_obj["next_order"] = {}
+            cls.run_driver(next_route, driver_obj)
+
         cls.update_driver_status(driver_num, "available")
         process = Process(target=cls.sio_emit, args=("setActiveDriver",{driver_num:driver_obj}))
+    @classmethod
+    def get_driver_next_order(cls, driver_num):
+        document = drivers_collection.find_one({"number": driver_num}, {"_id": 0, "next_order":1})
+        next_order = document.get("next_order")
+        return next_order
 
     @classmethod
     def create_or_update_driver_db(cls, name, status, lat, lng, num, order, next_order=[]):
@@ -256,19 +277,30 @@ class Simulation:
         nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
         
         resturent_to_order_route = cls.create_route(nearest_resturent_location, None, order_location)
-        
+
         drivers = drivers_collection.find({"status":{"$in":["busy", "available"]}},{"_id":0})
         drivers_list = [driver for driver in drivers]
         best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
-        print("best driver", best_driver)
-        best_driver.update({"order":order})
-        cls.update_driver(best_driver)
+
+        process = Process(target=cls.sio_emit, args=("setBluePolyLine", {best_driver["number"]:resturent_to_order_route}))
+        process.start()
+
         if best_driver["status"] == "available":
+            best_driver.update({"order":order})
+            cls.update_driver(best_driver)
             best_driver_location = (best_driver.get("lat"), best_driver.get("lng"))
             driver_to_resturent_route = cls.create_route(best_driver_location, None, nearest_resturent_location)
+                
+            process = Process(target=cls.sio_emit, args=("setRedPolyLine", {best_driver["number"]:driver_to_resturent_route}))
+            process.start()
+
             cls.run_driver(driver_to_resturent_route, best_driver)
             cls.run_driver(resturent_to_order_route, best_driver)
-        
+        elif best_driver["status"] == "busy":
+            best_driver.update({"next_order":order})
+            cls.update_driver(best_driver)
+
+        return True
 
     @classmethod
     def get_best_driver(cls, resturent_location, drivers_list):

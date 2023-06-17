@@ -23,7 +23,7 @@ dbname = client['FleetManagementSystem']
 users = dbname["User"]
 customers = dbname["Customer"]
 drivers = dbname["Driver"]
-products = dbname["Item"]
+items = dbname["Item"]
 menus = dbname["Menu"]
 businesses = dbname["Business"]
 orders = dbname["Order"]
@@ -80,6 +80,8 @@ def create_business(request):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
+from django.http import JsonResponse
+import json
 
 @csrf_exempt
 def login(request):
@@ -90,13 +92,58 @@ def login(request):
         business = businesses.find_one({"email": email})
         if business and business['password'] == password:
             # business exists and password matches, return success response
-            return JsonResponse({'success': True, 'message': 'Login successful'})
+            return JsonResponse({'success': True, 'business_id': str(business['_id']), 'menu_id': str(business['menu']), 'message': 'Login successful'})
         else:
             # business does not exist or password does not match, return error response
             return JsonResponse({'success': False, 'message': 'Invalid email or password'}, status=401)
     else:
         # Invalid request method
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
+@csrf_exempt
+def update_business(request, business_id):
+    if request.method == 'PATCH':
+        data = json.loads(request.body)
+        updated_business = {}
+
+        # Check if the business exists
+        business = businesses.find_one({"_id": ObjectId(business_id)})
+        if not business:
+            return JsonResponse({'error': 'Business not found.'}, status=404)
+
+        # Update fields that are present in the request data
+        if 'name' in data:
+            updated_business['name'] = data['name']
+        if 'phone' in data:
+            updated_business['phone'] = data['phone']
+        if 'business_website' in data:
+            updated_business['business_website'] = data['business_website']
+        if 'email' in data:
+            updated_business['email'] = data['email']
+        if 'password' in data:
+            updated_business['password'] = data['password']
+        if 'address' in data:
+            updated_business['address'] = data['address']
+        if 'contact_name' in data:
+            updated_business['contact_name'] = data['contact_name']
+        if 'postal_code' in data:
+            updated_business['postal_code'] = data['postal_code']
+        if 'type' in data:
+            # Check if the business type is valid
+            if data['type'] not in ['Market', 'Restaurant']:
+                return JsonResponse({'error': 'Invalid business type. Business type must be Market or Restaurant.'}, status=400)
+            updated_business['type'] = data['type']
+
+        # Perform the update operation
+        businesses.update_one({"_id": ObjectId(business_id)}, {"$set": updated_business})
+
+        return JsonResponse({'message': 'Business updated successfully.'}, status=200)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
 
 
 # @csrf_exempt
@@ -118,13 +165,69 @@ def login(request):
 #             "description": description,
 #             "available": available,
 #         }
-#         item_id = products.insert_one(item).inserted_id
+#         item_id = items.insert_one(item).inserted_id
 #         menus.find_one_and_update({"_id": ObjectId(menu_id)}, {'$push': {'items': item_id}})
 #         return JsonResponse({'message': 'Item added successfully'})
 #     else:
 #         return JsonResponse({'error': 'Invalid request method'})
-    
-    
+
+
+@csrf_exempt
+def calculate_total_price(request, business_id):
+    if request.method == 'GET':
+        pipeline = [
+            {"$match": {"_id": ObjectId(business_id)}},
+            {"$lookup": {
+                "from": "orders",
+                "localField": "_id",
+                "foreignField": "business_id",
+                "as": "orders"
+            }},
+            {"$group": {"_id": None, "total_price": {"$sum": "$orders.total_cost"}}}
+        ]
+
+        aggregation_result = list(businesses.aggregate(pipeline))
+
+        total_price = aggregation_result[0]['total_price'] if aggregation_result else 0
+
+        response = {'total_price': total_price}
+        return JsonResponse(response, status=200)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+@csrf_exempt
+def get_orders_price(request, business_id):
+    if request.method == "GET":
+        # Find orders with given business ID in the database
+        order_docs = orders.find({"business_id": business_id})
+
+        total_price = sum(order_doc["total_cost"] for order_doc in order_docs)
+
+        order_details_json = {
+            "total_price": total_price
+        }
+
+        return JsonResponse(order_details_json, safe=False)
+
+    return JsonResponse({"message": "Invalid request method"}, status=400)
+
+
+
+@csrf_exempt
+def get_delivered_orders(request, business_id):
+    if request.method == "GET":
+        # Find delivered orders with the given business ID in the database
+        delivered_orders = orders.find({"business_id": business_id, "status": "pending"})
+
+        # Convert the orders to a list of dictionaries
+        delivered_orders_list = list(delivered_orders)
+
+        return JsonResponse(delivered_orders_list, safe=False, json_dumps_params={'default': json_util.default})
+
+    return JsonResponse({"message": "Invalid request method"}, status=400)
+
+
 @csrf_exempt
 def add_item(request):
     if request.method == 'POST':
@@ -157,6 +260,7 @@ def add_item(request):
                 "image_id": str(image_id),
                 "description": description,
                 "available": available,
+                
             }
         else:
             item = {
@@ -167,7 +271,7 @@ def add_item(request):
                 "available": available,
             }
         
-        item_id = products.insert_one(item).inserted_id
+        item_id = items.insert_one(item).inserted_id
         menus.find_one_and_update({"_id": ObjectId(menu_id)}, {'$push': {'items': item_id}})
         return JsonResponse({'message': 'Item added successfully'})
     else:
@@ -180,7 +284,7 @@ def add_item(request):
 @csrf_exempt
 def get_item(request, item_id):
     if request.method == 'GET':
-        item = products.find_one({"_id": ObjectId(item_id)})
+        item = items.find_one({"_id": ObjectId(item_id)})
         image = fs.get(item.image_id)
         
         if item:
@@ -201,7 +305,7 @@ def edit_item(request, item_id):
         description = data.get("description", None)
         available = data.get("available", None)
 
-        item = products.find_one({"_id": ObjectId(item_id)})
+        item = items.find_one({"_id": ObjectId(item_id)})
         if not item:
             return JsonResponse({"message": "Item not found"})
 
@@ -214,7 +318,7 @@ def edit_item(request, item_id):
             "available": available or item["available"]
         }
 
-        products.update_one({"_id": ObjectId(item_id)}, {"$set": new_item})
+        items.update_one({"_id": ObjectId(item_id)}, {"$set": new_item})
         return JsonResponse({"message": "Item edited successfully"})
 
     return JsonResponse({"message": "Invalid request method"})
@@ -223,12 +327,12 @@ def edit_item(request, item_id):
 @csrf_exempt
 def delete_item(request, menu_id, item_id):
     if request.method == "DELETE":
-        item = products.find_one({"_id": ObjectId(item_id)})
+        item = items.find_one({"_id": ObjectId(item_id)})
         if not item:
             return JsonResponse({"message": "Item not found"})
 
         menus.update_one({"_id": ObjectId(menu_id)}, {"$pull": {"items": ObjectId(item_id)}})
-        products.delete_one({"_id": ObjectId(item_id)})
+        items.delete_one({"_id": ObjectId(item_id)})
         return JsonResponse({"message": "Item deleted successfully"})
 
     return JsonResponse({"message": "Invalid request method"})

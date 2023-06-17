@@ -2,10 +2,7 @@ import * as React from 'react';
 import PropTypes from 'prop-types';
 import { NumericFormat } from 'react-number-format';
 import Box from '@mui/material/Box';
-import Input from '@mui/material/Input';
-import InputLabel from '@mui/material/InputLabel';
 import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
 
 
 const NumericFormatCustom = React.forwardRef(function NumericFormatCustom(
@@ -58,7 +55,7 @@ export default function FormattedInputs() {
       }}
     >
       <TextField
-        label="react-number-format"
+        label="number of drivers"
         value={values.numberformat}
         onChange={handleChange}
         name="numberformat"

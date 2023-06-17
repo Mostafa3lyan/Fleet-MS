@@ -4,23 +4,17 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import Switch from '@mui/material/Switch';
-import TextField from '@mui/material/TextField';
 import { startSimulation } from '../api/Simulation';
 import FormattedInputs from './IntInput';
 
 
 export default function SimDialog({socket}) {
   const [open, setOpen] = React.useState(false);
-  const [fullWidth, setFullWidth] = React.useState(true);
-  const [maxWidth, setMaxWidth] = React.useState('sm');
   const [Speed, setSpeed] = React.useState('R');
 
   const handleClickOpen = () => {
@@ -49,9 +43,6 @@ export default function SimDialog({socket}) {
     );
   };
 
-  const handleFullWidthChange = (event) => {
-    setFullWidth(event.target.checked);
-  };
 
   return (
     <React.Fragment>
@@ -59,8 +50,8 @@ export default function SimDialog({socket}) {
         start simulation
       </Button>
       <Dialog
-        fullWidth={fullWidth}
-        maxWidth={maxWidth}
+        fullWidth={true}
+        maxWidth={'sm'}
         open={open}
         onClose={handleClose}
       >
@@ -77,7 +68,7 @@ export default function SimDialog({socket}) {
             }}
           >
             <FormControl sx={{ mt: 2, minWidth: 120 }}>
-              <InputLabel htmlFor="max-width">Drivers speed</InputLabel>
+              <InputLabel htmlFor="max-width">Speed</InputLabel>
               <Select
                 autoFocus
                 value={Speed}

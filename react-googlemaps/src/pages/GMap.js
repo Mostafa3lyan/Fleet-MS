@@ -11,6 +11,8 @@ import {
 import Markers from "../components/Markers";
 import SimDialog from "../components/SimModal";
 import { io } from 'socket.io-client';
+import { assignOrder } from "../api/assignOrder";
+import PolyLines from "../components/Polylines";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL, {
   path: process.env.REACT_APP_SOCKET_PATH
@@ -30,6 +32,13 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
   
       socket.on('connect', onConnect);
       socket.on('disconnect', onDisconnect);
+
+
+
+  
+      socket.on('setBluePolyLine', (Bolyline) => {
+        console.log('setBluePolyLine >>>>>>> >>> ', Bolyline);
+      });
 
 
       const listener = e => {
@@ -58,6 +67,10 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
         setSelectedMarker={setSelectedMarker}
         socket={socket}
         />
+        <PolyLines
+        socket={socket}
+        />
+
         {selectedMarker && (
           <InfoWindow
             onCloseClick={() => {
@@ -86,7 +99,7 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
 
     function assignOrderHandler(){
       console.log("Assigning order handler clicked");
-      socket.emit('assign_order')        
+      assignOrder();      
     }
 
     return (
@@ -101,8 +114,8 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
         <MapWrapped
           googleMapURL={`https://maps.googleapis.com/maps/api/js?key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA&v=3.exp&libraries=geometry,drawing,places}`}
           loadingElement={<div style={{ height: `80%` }} />}
-          containerElement={<div style={{ height: `80%` }} />}
-          mapElement={<div style={{ height: `80%` }} />}
+          containerElement={<div style={{ height: `100%` }} />}
+          mapElement={<div style={{ height: `90%` }} />}
         />
       </div>
       </div>

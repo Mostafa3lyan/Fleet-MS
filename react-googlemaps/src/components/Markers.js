@@ -62,6 +62,17 @@ export default function Markers({setSelectedMarker, socket}) {
 
 
 
+      socket.on('updateBusyDriverLocation', (driverData) => {
+        const targetDriver = BusyDrivers[driverData.number];
+        console.log("BusyDrivers", BusyDrivers);
+        // const NewDriver = targetDriver.assign(driverData);
+        // setBusyDrivers(Driver => ({
+        //   ...Driver,
+        //   ...NewDriver
+        // }));
+      });
+      
+
       socket.on('setActiveDriver', (ActiveDriver) => {
         setActiveDrivers(Driver => ({
           ...Driver,
@@ -83,7 +94,7 @@ export default function Markers({setSelectedMarker, socket}) {
         }));
       });
 
-    }, []);
+    }, [BusyDrivers]);
   
 
     return (

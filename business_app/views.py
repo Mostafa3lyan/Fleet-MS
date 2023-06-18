@@ -171,61 +171,72 @@ def update_business(request, business_id):
 #     else:
 #         return JsonResponse({'error': 'Invalid request method'})
 
+@csrf_exempt
+def get_in_progress_orders(request, business_id):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "confirmed"
+        data = orders.find({"status": "confirmed"})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
 
 @csrf_exempt
-def calculate_total_price(request, business_id):
+def out_for_delivery_orders(request, business_id):
     if request.method == 'GET':
-        pipeline = [
-            {"$match": {"_id": ObjectId(business_id)}},
-            {"$lookup": {
-                "from": "orders",
-                "localField": "_id",
-                "foreignField": "business_id",
-                "as": "orders"
-            }},
-            {"$group": {"_id": None, "total_price": {"$sum": "$orders.total_cost"}}}
-        ]
-
-        aggregation_result = list(businesses.aggregate(pipeline))
-
-        total_price = aggregation_result[0]['total_price'] if aggregation_result else 0
-
-        response = {'total_price': total_price}
-        return JsonResponse(response, status=200)
+        # Get the documents from the MongoDB collection with the status "In transit"
+        data = orders.find({"status": "In transit"})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
     else:
-        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+@csrf_exempt
+def get_completed_orders(request, business_id):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "delivered"
+        data = orders.find({"status": "delivered"})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 @csrf_exempt
 def get_orders_price(request, business_id):
-    if request.method == "GET":
-        # Find orders with given business ID in the database
-        order_docs = orders.find({"business_id": business_id})
-
-        total_price = sum(order_doc["total_cost"] for order_doc in order_docs)
-
-        order_details_json = {
-            "total_price": total_price
-        }
-
-        return JsonResponse(order_details_json, safe=False)
-
-    return JsonResponse({"message": "Invalid request method"}, status=400)
+    if request.method == 'GET':
+        # Get all orders for the specific business
+        data = orders.find({"business_id": ObjectId(business_id)})
+        
+        # Calculate the sum of the total cost
+        total_price = sum(order["total_cost"] for order in data)
+        
+        return JsonResponse({'total_price': total_price}, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 
-@csrf_exempt
-def get_delivered_orders(request, business_id):
-    if request.method == "GET":
-        # Find delivered orders with the given business ID in the database
-        delivered_orders = orders.find({"business_id": business_id, "status": "pending"})
+# @csrf_exempt
+# def get_delivered_orders(request, business_id):
+#     if request.method == "GET":
+#         # Find delivered orders with the given business ID in the database
+#         delivered_orders = orders.find({"business_id": business_id, "status": "pending"})
 
-        # Convert the orders to a list of dictionaries
-        delivered_orders_list = list(delivered_orders)
+#         # Convert the orders to a list of dictionaries
+#         delivered_orders_list = list(delivered_orders)
 
-        return JsonResponse(delivered_orders_list, safe=False, json_dumps_params={'default': json_util.default})
+#         return JsonResponse(delivered_orders_list, safe=False, json_dumps_params={'default': json_util.default})
 
-    return JsonResponse({"message": "Invalid request method"}, status=400)
+#     return JsonResponse({"message": "Invalid request method"}, status=400)
 
 
 @csrf_exempt

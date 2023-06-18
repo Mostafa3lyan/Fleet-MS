@@ -41,6 +41,22 @@ business_reviews = db["business_reviews"]
 #         return JsonResponse(status=405)
 
 
+@csrf_exempt
+def getCustomer(request, customer_id):
+    if request.method == 'GET':
+        # Get the document from the MongoDB collection
+        customer = customers.find_one({'_id': ObjectId(customer_id)})
+        if not customer:
+            return JsonResponse({'error': 'Customer not found'})
+        # Convert the ObjectId to a string
+        document_dict = dict(customer)
+        document_dict['id'] = str(document_dict['_id'])
+        # Remove the ObjectId from the document
+        del document_dict['_id']
+        # Return a JSON response with the document data
+        return JsonResponse(document_dict, safe=False)
+    else:
+        return JsonResponse(status=405)
 
 @csrf_exempt
 def login(request):
@@ -118,7 +134,7 @@ def change_password(request):
 
 
 @csrf_exempt
-def edit_account(request, user_id):
+def edit_account(request, customer_id):
     if request.method == 'PATCH':
         data = json.loads(request.body)
         first_name = data.get('first_name')
@@ -133,7 +149,7 @@ def edit_account(request, user_id):
             "phone": phone,
             "address": address
         }
-        customer_obj = customers.find_one({"_id": ObjectId(user_id)})
+        customer_obj = customers.find_one({"_id": ObjectId(customer_id)})
         if not customer_obj:
             return JsonResponse({'error': 'User with this ID does not exist'})
 
@@ -146,8 +162,8 @@ def edit_account(request, user_id):
 
 
 @csrf_exempt
-def delete_account(request, user_id):
-    customer = customers.find_one({"_id": ObjectId(user_id)})
+def delete_account(request, customer_id):
+    customer = customers.find_one({"_id": ObjectId(customer_id)})
     if not customer:
         return JsonResponse({'error': 'User with this id does not exist'})
     else:

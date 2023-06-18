@@ -48,7 +48,7 @@ def create_business(request):
         business_type = data.get('type')
 
         # Check if any of the fields are missing
-        if not all([name, phone, email,password, address, contact_name, postal_code, business_type]):
+        if not all([name, phone, email,password, address, contact_name, postal_code, business_type,business_website]):
             return JsonResponse({'error': 'Missing fields.'}, status=400)
         
         # Check if the business type is valid

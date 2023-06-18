@@ -42,9 +42,17 @@ INSTALLED_APPS = [
     'driver_app.apps.DriverAppConfig',
     'business_app.apps.BusinessAppConfig',
     'rest_framework',
+    'corsheaders',
    # 'mongo_auth',
     
 ]
+
+CORS_ALLOWED_ORIGINS = [
+'http://localhost:3000'
+    ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -54,6 +62,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+            'corsheaders.middleware.CorsMiddleware',
+        'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'MyFMS.urls'

@@ -13,6 +13,7 @@ import SimDialog from "../components/SimModal";
 import { io } from 'socket.io-client';
 import { assignOrder } from "../api/assignOrder";
 import PolyLines from "../components/Polylines";
+import CustomizedSnackbars from "../components/snackBar";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL, {
   path: process.env.REACT_APP_SOCKET_PATH
@@ -83,7 +84,8 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
           >
             <div>
               <h2>{selectedMarker.name}</h2>
-              <p>{selectedMarker.details}</p>
+              <h3>{selectedMarker.status}</h3>
+              <p>{selectedMarker.order.details}</p>
             </div>
           </InfoWindow>
         )}
@@ -96,10 +98,16 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
   const MapWrapped = withScriptjs(withGoogleMap(Map));
   
   export default function MainMap() {
+    const [open, setOpen] = React.useState(false);
 
     function assignOrderHandler(){
       console.log("Assigning order handler clicked");
-      assignOrder();      
+      assignOrder().then((result) => {
+        if (result){
+          setOpen(true);
+        }
+        
+      });
     }
 
     return (
@@ -118,6 +126,10 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
           mapElement={<div style={{ height: `90%` }} />}
         />
       </div>
+      <CustomizedSnackbars
+      setOpen={setOpen}
+      open={open}
+      />
       </div>
     
       );

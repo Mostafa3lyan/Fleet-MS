@@ -24,7 +24,6 @@ export default function Markers({setSelectedMarker, socket}) {
       const DriversMarkersArray = [];
       Object.keys(obj).forEach(function(key, index) {
         const driver = obj[key];
-        console.log("driver", driver);
         DriversMarkersArray.push(
           <Marker
             key={key}
@@ -34,6 +33,7 @@ export default function Markers({setSelectedMarker, socket}) {
             }}
             onClick={() => {
               setSelectedMarker(driver);
+              console.log("driver", driver);
             }}
             icon={{
               url: DriverIcon,
@@ -57,44 +57,68 @@ export default function Markers({setSelectedMarker, socket}) {
       })
 
       get_drivers().then(res =>{
+        const allDrivers = res.drivers
+        allDrivers.map ((driver) =>{
+          const driverInState = {};
+          driverInState[driver.number] = driver
+          if (driver.status === 'busy'){
+            setBusyDrivers(Driver => ({
+              ...Driver,
+              ...driverInState
+            }));
+          } else 
+          if (driver.status === 'available') {
+            setActiveDrivers(Driver => ({
+              ...Driver,
+              ...driverInState
+            }));
+          }else {
+            setNotAvailableDrivers(Driver => ({
+              ...Driver,
+              ...driverInState
+            }));
+          }
+
+
+        })
         setDrivers(res.drivers);
       })
 
 
 
-      socket.on('updateBusyDriverLocation', (driverData) => {
-        const targetDriver = BusyDrivers[driverData.number];
-        console.log("BusyDrivers", BusyDrivers);
-        // const NewDriver = targetDriver.assign(driverData);
-        // setBusyDrivers(Driver => ({
-        //   ...Driver,
-        //   ...NewDriver
-        // }));
-      });
       
 
       socket.on('setActiveDriver', (ActiveDriver) => {
-        setActiveDrivers(Driver => ({
-          ...Driver,
+        setActiveDrivers(Drivers => ({
+          ...Drivers,
           ...ActiveDriver
         }));
       });
 
       socket.on('setBusyDriver', (BusyDriver) => {
-        setBusyDrivers(Driver => ({
-          ...Driver,
+        setBusyDrivers(Drivers => ({
+          ...Drivers,
           ...BusyDriver
         }));
       });
 
       socket.on('setNotAvailableDriver', (NotAvailableDriver) => {
-        setNotAvailableDrivers(Driver => ({
-          ...Driver,
+        setNotAvailableDrivers(Drivers => ({
+          ...Drivers,
           ...NotAvailableDriver
         }));
       });
 
-    }, [BusyDrivers]);
+
+      socket.on('removeAvailbleMarker', (driverNumber) => {
+        setActiveDrivers(Drivers => {
+          delete Drivers[driverNumber];
+          return Drivers
+        });
+      });
+
+
+    }, []);
   
 
     return (
@@ -108,11 +132,11 @@ export default function Markers({setSelectedMarker, socket}) {
             }}
             onClick={() => {
 
-              setSelectedMarker(restaurant);
+              // setSelectedMarker(restaurant);
             }}
             icon={{
-              url:  "https://static.slickdealscdn.com/attachment/1/8/6/3/2/3/2/9853645.attach",
-              scaledSize: new window.google.maps.Size(40, 22)
+              url:  "https://img.icons8.com/fluency/48/kfc-chicken.png",
+              scaledSize: new window.google.maps.Size(30, 30)
             }}
           />
         ))
@@ -125,7 +149,7 @@ export default function Markers({setSelectedMarker, socket}) {
               lng: order.lng
             }}
             onClick={() => {
-              setSelectedMarker(order);
+              // setSelectedMarker(order);
             }}
             icon={{
               url:  "https://img.icons8.com/cotton/64/take-away-food.png",

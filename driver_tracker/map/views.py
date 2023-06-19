@@ -148,7 +148,7 @@ def start_simulation(request):
     if request.method == 'POST':
         # Get the request data
         data = json.loads(request.body)
-        speed_dict = {"S":10, "R":1, "F":0.1}
+        speed_dict = {"S":10, "R":1, "F":0.01}
         speed = data.get('speed')
         drivers_number = data.get('drivers_number')
         speed_float = speed_dict.get(speed.upper())
@@ -173,7 +173,7 @@ def assign_order(request):
 
         result = Simulation.assign_order()
         if not result:
-            return JsonResponse({'error': 'assign_order'}, status=500)
+            return JsonResponse({'error': 'assign_order'}, status=404)
     
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)

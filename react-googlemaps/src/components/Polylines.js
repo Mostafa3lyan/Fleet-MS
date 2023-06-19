@@ -14,10 +14,11 @@ export default function PolyLines({socket}) {
 
 
     function getPolyLine(obj,color){
+      console.log("polyLine >>>>>>>>>>>> ", obj);
+
       const PolylineArray = [];
       Object.keys(obj).forEach(function(key, index) {
         const polyLine = obj[key];
-        console.log("polyLine", polyLine);
         PolylineArray.push(
           <Polyline
           key={key}
@@ -46,7 +47,7 @@ export default function PolyLines({socket}) {
         const driverNumber = Object.keys(Polyline)[0]
         const PolylineArray = Polyline[driverNumber]
         const polyLine = objectify(PolylineArray)        
-        Polyline = {driverNumber:polyLine}
+        Polyline[driverNumber] = polyLine
 
         setBluePolyLine(PolyLines => ({
           ...PolyLines,
@@ -58,7 +59,7 @@ export default function PolyLines({socket}) {
         const driverNumber = Object.keys(Polyline)[0]
         const PolylineArray = Polyline[driverNumber]
         const polyLine = objectify(PolylineArray)        
-        Polyline = {driverNumber:polyLine}
+        Polyline[driverNumber] = polyLine
 
         setRedPolyLine(PolyLines => ({
           ...PolyLines,
@@ -67,11 +68,39 @@ export default function PolyLines({socket}) {
       });
 
 
+      socket.on('removeRedPolylineStep', (driver_num) => {
+        setRedPolyLine((PolyLines) => {
+          const Polyline = PolyLines[driver_num];
+          console.log("Polyline", Polyline);
+          if (Polyline !== undefined){
+          const NewPolyline = Polyline.slice(1, Polyline.length)
+          const newPolylineInState = {}
+          newPolylineInState[driver_num] = NewPolyline
+          return {...PolyLines, ...newPolylineInState}
+          };
+        });
+      });
+
+      socket.on('removeBluePolylineStep', (driver_num) => {
+        setBluePolyLine((PolyLines) => {
+          const Polyline = PolyLines[driver_num];
+          console.log("Polyline", Polyline);
+          if (Polyline !== undefined){
+          const NewPolyline = Polyline.slice(1, Polyline.length)
+          const newPolylineInState = {}
+          newPolylineInState[driver_num] = NewPolyline
+          return {...PolyLines, ...newPolylineInState}
+          };
+        });
+
+      });
+
+
     }, []);
   
 
     return (
-      <>
+      <div>
         {
         Object.keys(BluePolyLine).length > 0 ? 
         (getPolyLine(BluePolyLine, '#669Df6'))
@@ -84,7 +113,7 @@ export default function PolyLines({socket}) {
         :
         ('')
         }
-      </>
+      </div>
     );
   }
 

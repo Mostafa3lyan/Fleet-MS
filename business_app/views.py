@@ -80,8 +80,6 @@ def create_business(request):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
-from django.http import JsonResponse
-import json
 
 @csrf_exempt
 def login(request):
@@ -101,6 +99,22 @@ def login(request):
         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+@csrf_exempt
+def get_business(request, business_id):
+    if request.method == 'GET':
+        # Get the document from the MongoDB collection
+        business = businesses.find_one({'_id': ObjectId(business_id)})
+        if business is None:
+            return JsonResponse({'error': 'Business not found.'}, status=404)
+        # Convert the ObjectId to a string
+        document_dict = dict(business)
+        document_dict['id'] = str(document_dict['_id'])
+        # Remove the ObjectId from the document
+        del document_dict['_id']
+        # Return a JSON response with the document data
+        return JsonResponse(json_util.dumps(document_dict), safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 
 @csrf_exempt

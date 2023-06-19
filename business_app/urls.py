@@ -5,6 +5,7 @@ urlpatterns = [
     
     path('create_business', views.create_business, name='create_business'),
     path('login', views.login, name='login'),
+    path('get_business/<str:business_id>/', views.get_business, name='get_business'),
     path('update_business/<str:business_id>/', views.update_business, name='update_business'),
     path('get_in_progress_orders/<str:business_id>/', views.get_in_progress_orders, name='get_in_progress_orders'),
     path('out_for_delivery_orders/<str:business_id>/', views.out_for_delivery_orders, name='out_for_delivery_orders'),

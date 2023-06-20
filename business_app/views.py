@@ -254,7 +254,7 @@ def get_orders_price(request, business_id):
 
 
 @csrf_exempt
-def add_item(request):
+def add_item(request,business_id):
     if request.method == 'POST':
         #data = json.loads(request.body) 
         menu_id = request.POST.get('menu_id')
@@ -285,7 +285,7 @@ def add_item(request):
                 "image_id": str(image_id),
                 "description": description,
                 "available": available,
-                
+                'business_id': ObjectId(business_id),
             }
         else:
             item = {
@@ -294,6 +294,7 @@ def add_item(request):
                 "category": category,
                 "description": description,
                 "available": available,
+                'business_id': ObjectId(business_id),
             }
         
         item_id = items.insert_one(item).inserted_id
@@ -361,6 +362,19 @@ def delete_item(request, menu_id, item_id):
         return JsonResponse({"message": "Item deleted successfully"})
 
     return JsonResponse({"message": "Invalid request method"})
+
+
+
+@csrf_exempt
+def get_current_orders(request, business_id):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the status "pending" and specific business_id
+        data = orders.find({"status": "pending", "business_id": ObjectId(business_id)})
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 @csrf_exempt

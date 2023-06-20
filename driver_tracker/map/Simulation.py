@@ -30,12 +30,14 @@ class Simulation:
     drivers_active = {}
     not_available_drivers = {}
     busy_drivers = {}
+    started = False 
 
     
     @classmethod
     def start(cls, drivers_num, speed):
         cls.drivers_num = drivers_num
         cls.speed = speed
+        cls.started = True
         for i in range(1, cls.drivers_num+1):
             driver_num = "driver{}_marker".format(i)
             
@@ -110,11 +112,10 @@ class Simulation:
         if polyline :
             if polyline == "red":
                 return
-        driver_obj = drivers_collection.find_one({"number":driver_obj["number"]}, {"_id":0})
+        driver_obj = drivers_collection.find_one({"number":driver_num}, {"_id":0})
         if next_order and driver_obj.get("next_resturent_location") :
             order_location = (next_order["lat"], next_order["lng"])
             driver_location = (driver_obj["lat"], driver_obj["lng"])
-            print("driver driver_obj is ", driver_obj)
             next_resturent_location = driver_obj.get("next_resturent_location")
             next_resturent_location = (next_resturent_location[0], next_resturent_location[1])
             restaurent_route = cls.create_route(driver_location, None, next_resturent_location) 
@@ -122,10 +123,20 @@ class Simulation:
             driver_obj["next_order"] = {}
             driver_obj["next_resturent_location"] = []
             cls.update_driver(driver_obj)
-            cls.run_driver(restaurent_route, driver_obj)
-            print("next_run_driver  >>>>>>>>>>>  before", driver_num)
-            cls.run_driver(next_route, driver_obj)
-            print("next_run_driver  >>>>>>>>>>>  after", driver_num)
+
+
+            setBluePolyLine = Process(target=cls.sio_emit, args=("setBluePolyLine", {driver_num:restaurent_route}))
+            setBluePolyLine.start()
+
+            setRedPolyLine = Process(target=cls.sio_emit, args=("setBluePolyLine", {driver_num:next_route}))
+            setRedPolyLine.start()
+
+            removeAvailbleMarker = Process(target=cls.sio_emit, args=("removeAvailbleMarker", driver_num))
+            removeAvailbleMarker.start()
+
+
+            cls.run_driver(restaurent_route, driver_obj, polyline="red")
+            cls.run_driver(next_route, driver_obj, polyline="blue")
 
         cls.update_driver_status(driver_num, "available")
         setActiveDriver = Process(target=cls.sio_emit, args=("setActiveDriver",{driver_num:driver_obj}))
@@ -290,6 +301,10 @@ class Simulation:
         query = {"assigned":False}
         projection = {"_id":0,"assigned":0}
         order = orders_collection.find_one(query, projection)
+        
+        # orders_collection.update_many({"assigned":True}, {"$set":{"assigned":False}})
+        # return True
+
         if not order: return False
         orders_collection.update_one(query,{"$set":{"assigned":True}})
         order_location = (order["lat"], order["lng"])
@@ -311,11 +326,12 @@ class Simulation:
             best_driver_location = (best_driver.get("lat"), best_driver.get("lng"))
             driver_to_resturent_route = cls.create_route(best_driver_location, None, nearest_resturent_location)
 
+            setRedPolyLine = Process(target=cls.sio_emit, args=("setRedPolyLine", {best_driver["number"]:driver_to_resturent_route}))
+            setRedPolyLine.start()
+            
             setBluePolyLine = Process(target=cls.sio_emit, args=("setBluePolyLine", {best_driver["number"]:resturent_to_order_route}))
             setBluePolyLine.start()
 
-            setRedPolyLine = Process(target=cls.sio_emit, args=("setRedPolyLine", {best_driver["number"]:driver_to_resturent_route}))
-            setRedPolyLine.start()
 
             removeAvailbleMarker = Process(target=cls.sio_emit, args=("removeAvailbleMarker", best_driver["number"]))
             removeAvailbleMarker.start()

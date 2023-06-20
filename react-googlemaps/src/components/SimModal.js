@@ -11,16 +11,14 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { startSimulation } from '../api/Simulation';
 import FormattedInputs from './IntInput';
-
+import LinearProgress from '@mui/material/LinearProgress';
 
 export default function SimDialog({socket}) {
   const [open, setOpen] = React.useState(false);
+  const [Started, setStarted] = React.useState(false);
   const [Speed, setSpeed] = React.useState('R');
 
   const handleClickOpen = () => {
-    socket.emit('print_message', "hello from socket" ,(result) => {
-      console.log("result", result)
-    });
     setOpen(true);
   };
 
@@ -30,10 +28,13 @@ export default function SimDialog({socket}) {
 
   const handleSubmit = () => {
     setOpen(false);
+    setStarted(true);
     const speed = document.getElementById("sim-speed").value
     const drivers_number = document.getElementById("formatted-numberformat-input").value
     startSimulation(speed, drivers_number).then((res)=> {
       console.log(res);
+      setStarted(false);
+
     })
   };
 
@@ -46,9 +47,14 @@ export default function SimDialog({socket}) {
 
   return (
     <React.Fragment>
+      {Started ? 
+      <Box sx={{ width: '100%'  }}>
+      <LinearProgress />
+      </Box> :
       <Button onClick={handleClickOpen}>
         start simulation
       </Button>
+      }
       <Dialog
         fullWidth={true}
         maxWidth={'sm'}

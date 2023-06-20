@@ -5,7 +5,7 @@ import polyline
 import googlemaps
 import time
 import random
-import threading
+from threading import Thread
 import numpy as np
 from django.views.decorators.csrf import csrf_exempt
 from cmath import *
@@ -171,9 +171,9 @@ def start_simulation(request):
 def assign_order(request):
     if request.method == 'POST':
 
-        result = Simulation.assign_order()
-        if not result:
-            return JsonResponse({'error': 'assign_order'}, status=404)
+        setRedPolyLine = Thread(target=Simulation.assign_order)
+        setRedPolyLine.start()
+
     
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -36,11 +36,6 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
 
 
 
-  
-      socket.on('setBluePolyLine', (Bolyline) => {
-        console.log('setBluePolyLine >>>>>>> >>> ', Bolyline);
-      });
-
 
       const listener = e => {
         if (e.key === "Escape") {

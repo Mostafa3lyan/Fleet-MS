@@ -69,20 +69,25 @@ export default function PolyLines({socket}) {
 
 
       socket.on('removeRedPolylineStep', (driver_num) => {
-        setRedPolyLine((PolyLines) => {
+        setRedPolyLine(PolyLines => {
+          if (PolyLines !== undefined){
+
+          console.log("PolyLines >>>> ", PolyLines);
           const Polyline = PolyLines[driver_num];
-          console.log("Polyline", Polyline);
           if (Polyline !== undefined){
           const NewPolyline = Polyline.slice(1, Polyline.length)
           const newPolylineInState = {}
           newPolylineInState[driver_num] = NewPolyline
           return {...PolyLines, ...newPolylineInState}
           };
+        }
+
         });
       });
 
       socket.on('removeBluePolylineStep', (driver_num) => {
-        setBluePolyLine((PolyLines) => {
+        setBluePolyLine(PolyLines => {
+          if (PolyLines !== undefined){
           const Polyline = PolyLines[driver_num];
           console.log("Polyline", Polyline);
           if (Polyline !== undefined){
@@ -91,6 +96,7 @@ export default function PolyLines({socket}) {
           newPolylineInState[driver_num] = NewPolyline
           return {...PolyLines, ...newPolylineInState}
           };
+        }
         });
 
       });
@@ -102,13 +108,17 @@ export default function PolyLines({socket}) {
     return (
       <div>
         {
+        typeof RedPolyLine === 'object' && 
+        RedPolyLine !== undefined &&
         Object.keys(BluePolyLine).length > 0 ? 
         (getPolyLine(BluePolyLine, '#669Df6'))
         :
         ('')
         }
         {
-        Object.keys(RedPolyLine).length > 0 ? 
+        typeof RedPolyLine === 'object' && 
+        RedPolyLine !== undefined &&
+        Object.keys(BluePolyLine).length > 0 ? 
         (getPolyLine(RedPolyLine, '#F75D59'))
         :
         ('')

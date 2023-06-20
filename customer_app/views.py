@@ -83,22 +83,24 @@ def create_new_account(request):
         data = json.loads(request.body)
         first_name = data.get('first_name')
         last_name = data.get('last_name')
+        email = data.get('email')
         password = data.get('password')
         confirm_password = data.get('confirm_password')
-        email = data.get('email')
         phone = data.get('phone')
         address = data.get('address')
+        
+        if password != confirm_password:
+            return JsonResponse({'success': False, 'message': 'Password and confirm password do not match'}, status=400)
+        
         if customers.find_one({"email": email}):
-            # User already exists, show error message
             return JsonResponse({'success': False, 'message': 'User with this email already exists'}, status=400)
         else:
-            # Insert the new user and return the inserted ID
             customer = {
                 "first_name": first_name,
                 "last_name": last_name,
+                "email": email,
                 "password": password,
                 "confirm_password": confirm_password,
-                "email": email,
                 "phone": phone,
                 "address": address
             }
@@ -106,8 +108,6 @@ def create_new_account(request):
             return JsonResponse({'success': True, 'id': str(result.inserted_id)})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
-
-
 
 @csrf_exempt
 def change_password(request):
@@ -254,45 +254,44 @@ def search_for_market(request, market_name):
 
 
 @csrf_exempt
-def add_item_to_cart(request, customer_id):
+def add_item_to_cart(request, customer_id, product_id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            product_id = data.get('product_id')
             product_quantity = int(data.get('product_quantity'))
-            business_id = data.get('business_id')
-
+            
             # Find the customer document with the given customer ID
             customer = customers.find_one({'_id': ObjectId(customer_id)})
             if not customer:
                 return JsonResponse({'success': False, 'error': 'Invalid customer ID'})
-
+            
             # Find the product document with the given ID
             product = products.find_one({'_id': ObjectId(product_id)})
             if not product:
                 return JsonResponse({'success': False, 'error': 'Invalid product ID'})
-
+            
             # Add the item details to the customer's cart
             cart = customer.get('cart', [])
             cart_item = {
                 'product_id': product_id,
                 'product_name': product.get('title'),
                 'quantity': product_quantity,
-                'business_id': business_id
+                'business_id': product.get('business_id')
             }
             if cart_item not in cart:
                 cart.append(cart_item)
-
+            
             # Update the customer's cart
             customers.update_one({'_id': ObjectId(customer_id)}, {'$set': {'cart': cart}})
-
-            return JsonResponse({'success': "item added to cart" })
+            
+            return JsonResponse({'success': True, 'message': 'Item added to cart'})
         except (ValueError, TypeError) as e:
             return JsonResponse({'success': False, 'error': 'Invalid request data'}, status=400)
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+
 
 
 

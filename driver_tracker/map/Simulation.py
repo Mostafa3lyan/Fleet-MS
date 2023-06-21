@@ -30,14 +30,12 @@ class Simulation:
     drivers_active = {}
     not_available_drivers = {}
     busy_drivers = {}
-    started = False 
 
     
     @classmethod
     def start(cls, drivers_num, speed):
         cls.drivers_num = drivers_num
         cls.speed = speed
-        cls.started = True
         for i in range(1, cls.drivers_num+1):
             driver_num = "driver{}_marker".format(i)
             
@@ -397,3 +395,11 @@ class Simulation:
 
         route_time = directions_result[0]['legs'][0]['duration']['value']
         return route_time
+
+
+
+@sio.event
+async def get_sim_status(sid):
+    print("get_sim_status called with Simulation.get_status(): ")
+    return 
+

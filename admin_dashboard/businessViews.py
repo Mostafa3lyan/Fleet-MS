@@ -47,7 +47,7 @@ def add_business(request):
         
         # Check if the business type is valid
         if business_type not in ['Market', 'Restaurant']:
-            return JsonResponse({'error': 'Invalid business type.'}, status=400)
+            return JsonResponse({'error': 'Invalid business type. business must be Market or Restaurant '}, status=400)
         
         # Check if the business name already exists
         if businesses.find_one({"name": name}):
@@ -184,22 +184,41 @@ def get_business(request, business_id):
 @csrf_exempt
 def update_business(request, business_id):
     if request.method == 'PATCH':
-        # Get the incoming data from the request
         data = json.loads(request.body)
-        # Extract individual fields from the data dictionary
-        name = data.get('name')
-        phone = data.get('phone')
-        email = data.get('email')
-        address = data.get('address')
-        type = data.get('type')
-        # Update only the specified fields in the MongoDB collection
-        result = businesses.update_one(
-            {'_id': ObjectId(business_id)}, {'$set': data})
-        # Check if the update was successful
-        if result.modified_count == 1:
-            return JsonResponse({'message': 'Business updated successfully.'})
-        else:
-            return JsonResponse({'error': 'Failed to update.'}, status=500)
+        updated_business = {}
+
+        # Check if the business exists
+        business = businesses.find_one({"_id": ObjectId(business_id)})
+        if not business:
+            return JsonResponse({'error': 'Business not found.'}, status=404)
+
+        # Update fields that are present in the request data
+        if 'name' in data:
+            updated_business['name'] = data['name']
+        if 'phone' in data:
+            updated_business['phone'] = data['phone']
+        if 'business_website' in data:
+            updated_business['business_website'] = data['business_website']
+        if 'email' in data:
+            updated_business['email'] = data['email']
+        if 'password' in data:
+            updated_business['password'] = data['password']
+        if 'address' in data:
+            updated_business['address'] = data['address']
+        if 'contact_name' in data:
+            updated_business['contact_name'] = data['contact_name']
+        if 'postal_code' in data:
+            updated_business['postal_code'] = data['postal_code']
+        if 'type' in data:
+            # Check if the business type is valid
+            if data['type'] not in ['Market', 'Restaurant']:
+                return JsonResponse({'error': 'Invalid business type. Business type must be Market or Restaurant.'}, status=400)
+            updated_business['type'] = data['type']
+
+        # Perform the update operation
+        businesses.update_one({"_id": ObjectId(business_id)}, {"$set": updated_business})
+
+        return JsonResponse({'message': 'Business updated successfully.'}, status=200)
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 

@@ -36,13 +36,14 @@ def add_business(request):
         phone = data.get('phone')
         business_website = data.get('business_website')
         email = data.get('email')
+        password = data.get('password')
         address = data.get('address')
         contact_name = data.get('contact_name')
         postal_code = data.get('postal_code')
         business_type = data.get('type')
 
         # Check if any of the fields are missing
-        if not all([name, phone, email, address, contact_name, postal_code, business_type]):
+        if not all([name, phone, email, password, address, contact_name, postal_code, business_type]):
             return JsonResponse({'error': 'Missing fields.'}, status=400)
         
         # Check if the business type is valid
@@ -66,6 +67,7 @@ def add_business(request):
             "phone": phone,
             "business_website": business_website,
             "email": email,
+            "password":password,
             "address": address,
             "contact_name": contact_name,
             "postal_code": postal_code,

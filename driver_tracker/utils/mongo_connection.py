@@ -8,3 +8,4 @@ database = client['FleetManagementSystem']
 orders_collection = database.get_collection("orders")
 restaurant_collection = database.get_collection("restaurants")
 drivers_collection = database.get_collection("drivers")
+sim_collection = database.get_collection("simulation")

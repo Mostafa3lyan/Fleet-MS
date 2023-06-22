@@ -1,6 +1,6 @@
 import socketio
 import os
-
+from utils.mongo_connection import sim_collection
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
 
@@ -31,3 +31,6 @@ async def disconnect(sid):
     print("SocketIO disconnect")
 
 
+@sio.event
+def get_sim_status(sid):
+    return sim_collection.find_one({})["sim_status"] 

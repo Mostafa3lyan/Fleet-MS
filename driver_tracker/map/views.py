@@ -142,7 +142,6 @@ def get_all_drivers(request):
 
 
 
-
 @csrf_exempt
 def start_simulation(request):
     if request.method == 'POST':
@@ -170,13 +169,21 @@ def start_simulation(request):
 @csrf_exempt
 def assign_order(request):
     if request.method == 'POST':
+        order = Simulation.get_order()
+        if not order :
+            return JsonResponse({"error": "All Orders Are Assigned"}, status=501)
+        
+        drivers = Simulation.get_drivers()
+        if not drivers :
+            return JsonResponse({"error": "No Drivers Available"}, status=501)
 
-        setRedPolyLine = Thread(target=Simulation.assign_order)
+        setRedPolyLine = Thread(target=Simulation.assign_order, args=[order, drivers])
         setRedPolyLine.start()
 
-    
+        return JsonResponse({"success": "Order Assigned Successfuly"}, status=201)
+
+
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
-    return JsonResponse({'message': 'order assign successfully'}, status=201)
 
 

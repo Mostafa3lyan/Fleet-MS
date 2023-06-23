@@ -3,30 +3,14 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import bcrypt
 from bson import json_util, ObjectId
-from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.contrib import messages
-from datetime import datetime
 import pymongo
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-
-
-client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-db = client['FleetManagementSystem']
-
-# Collections
-admins = db["Admin"]
-users = db["User"]
-customers = db["Customer"]
-products = db["Item"]
-menus = db["Menu"]
-businesses = db["Business"]
-orders = db["Order"]
-business_reviews = db["business_reviews"]
+from .udb.mongodb import *
 
 
 # Create your views here.
@@ -52,7 +36,7 @@ def getAllUsers(request):
 def getAll_business_Users(request):
     if request.method == 'GET':
         # Get all user documents with user_type "business" from the 'User' collection
-        users = db["User"]
+        users = dbname["User"]
         data = users.find({"user_type": "business"})
         # Convert the MongoDB documents to Python dictionaries and add them to a list
         response_data = [user for user in data]
@@ -67,7 +51,7 @@ def getAll_business_Users(request):
 def getAll_driver_Users(request):
     if request.method == 'GET':
         # Get all user documents with user_type "driver" from the 'User' collection
-        users = db["User"]
+        users = dbname["User"]
         data = users.find({"user_type": "driver"})
         # Convert the MongoDB documents to Python dictionaries and add them to a list
         response_data = [user for user in data]

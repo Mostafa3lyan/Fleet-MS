@@ -1,31 +1,25 @@
 from cmath import *
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import requests
-import math
 from bson import json_util
 from bson.objectid import ObjectId
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from datetime import datetime
-# from utilities.mongodb import *
-import pymongo
+from .udb.mongodb import *
+# import pymongo
 
-client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-dbname = client['FleetManagementSystem']
+# client = pymongo.MongoClient('mongodb+srv://ahmed:2233@fleetmanagementsystem.5xv0klr.mongodb.net/test')
+# dbname = client['FleetManagementSystem']
 
-# Collections
-users = dbname["User"]
-customers = dbname["Customer"]
-drivers = dbname["Driver"]
-products = dbname["Item"]
-menus = dbname["Menu"]
-businesses = dbname["Business"]
-orders = dbname["Order"]
-business_reviews = dbname["business_reviews"]
-vehicles = dbname["Vehicle"]
+# # Collections
+# users = dbname["User"]
+# customers = dbname["Customer"]
+# drivers = dbname["Driver"]
+# products = dbname["Item"]
+# menus = dbname["Menu"]
+# businesses = dbname["Business"]
+# orders = dbname["Order"]
+# business_reviews = dbname["business_reviews"]
+# vehicles = dbname["Vehicle"]
 
 
 @csrf_exempt
@@ -239,26 +233,32 @@ def delete_business(request, business_id):
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
 @csrf_exempt
-def get_menu(request, id):
-    menu = menus.find_one({'_id': ObjectId(id)})
+def get_menu(request, business_id):
+    menu = menus.find_one({'_id': ObjectId(business_id)})
+
     if not menu:
-        business = businesses.find_one({'_id': ObjectId(id)})
+        business = businesses.find_one({'_id': ObjectId(business_id)})
         if business:
             menu_id = business.get('menu')
             menu = menus.find_one({'_id': ObjectId(menu_id)})
+
     if menu:
         menu_name = menu['name']
         item_ids = menu['items']
         menu_items = []
+
         for item_id in item_ids:
             item = products.find_one({'_id': ObjectId(item_id)})
             if item:
                 menu_items.append(item)
+
         response_data = {
             'menu_name': menu_name,
             'items': menu_items,
         }
+
         return JsonResponse(response_data, json_dumps_params={'default': json_util.default})
+
     else:
         response_data = {'error': 'Menu not found'}
         return JsonResponse(response_data, status=404)

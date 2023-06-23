@@ -3,42 +3,11 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import requests
-import math
 from bson import json_util
 from bson.objectid import ObjectId
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from datetime import datetime , timedelta
-# from ..utilities.mongodb import *
-import pymongo
+from .udb.mongodb import *
 
-
-client = pymongo.MongoClient(
-    'mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-db = client['FleetManagementSystem']
-
-# Collections
-users = db["User"]
-customers = db["Customer"]
-products = db["Item"]
-menus = db["Menu"]
-businesses = db["Business"]
-orders = db["Order"]
-business_reviews = db["business_reviews"]
-
-
-# @csrf_exempt
-# def createCustomer(request):
-#     if request.method == 'POST':
-#         # Get the incoming data from the request
-#         data = json.loads(request.body)
-#         # Insert the document into the MongoDB collection
-#         result = customers.insert_one(data)
-#         # Return a JSON response with the inserted document ID
-#         return JsonResponse({'id': str(result.inserted_id)})
-#     else:
-#         return JsonResponse(status=405)
 
 
 @csrf_exempt

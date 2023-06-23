@@ -1,33 +1,14 @@
 from cmath import *
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import requests
-import math
 from bson import json_util
 from bson.objectid import ObjectId
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from datetime import datetime
-# from utilities.mongodb import *
-import pymongo
 import gridfs
 from PIL import Image
 import io
+from .udb.mongodb import *
 
-
-client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-dbname = client['FleetManagementSystem']
-
-# Collections
-users = dbname["User"]
-customers = dbname["Customer"]
-drivers = dbname["Driver"]
-items = dbname["Item"]
-menus = dbname["Menu"]
-businesses = dbname["Business"]
-orders = dbname["Order"]
-business_reviews = dbname["business_reviews"]
 fs = gridfs.GridFS(dbname)
 
 
@@ -115,6 +96,25 @@ def get_business(request, business_id):
         return JsonResponse(json_util.dumps(document_dict), safe=False)
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+# @csrf_exempt
+# def get_business(request, business_id):
+#     if request.method == 'GET':
+#         # Get the document from the MongoDB collection
+#         business = businesses.find_one({'_id': ObjectId(business_id)})
+#         if not business:
+#             return JsonResponse({'error': 'business not found'})
+#         # Convert the ObjectId to a string
+#         document_dict = dict(business)
+#         document_dict['id'] = str(document_dict['_id'])
+#         # Remove the ObjectId from the document
+#         del document_dict['_id']
+#         # Return a JSON response with the document data
+#         return JsonResponse(json_util.dumps(document_dict), safe=False)
+#     else:
+#         return JsonResponse(status=405)
+
+
 
 
 @csrf_exempt
@@ -530,6 +530,33 @@ def view_orders_history(request, business_id):
         return JsonResponse({'orders':json_util.dumps (orders_details)})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+# @csrf_exempt
+# def view_orders_history(request, business_id):
+#     if request.method == 'GET':
+#         # Extract relevant fields from business document
+#         orders_cursor = dbname["Order"].find({"business_id": ObjectId(business_id)})
+#         orders = list(orders_cursor)
+#         orders_details = []
+#         for order in orders:
+#             order_details = {
+#                 'order_id': str(order['_id']),
+#                 'customer_id': str(order['customer_id']),
+#                 'total_cost': order['total_cost'],
+#                 'items': order['items'],
+#                 'status': order['status'],
+#                 'date': order['date'],
+#                 'delivery_address': order['delivery_address']
+#             }
+#             orders_details.append(order_details)
+#         return JsonResponse(json_util.dumps(orders_details), safe=False)
+#     else:
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
 
 
 

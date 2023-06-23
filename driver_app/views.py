@@ -1,32 +1,10 @@
 from cmath import *
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import requests
-import math
 from bson import json_util
 from bson.objectid import ObjectId
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from datetime import datetime
-# from utilities.mongodb import *
-import pymongo
-
-
-client = pymongo.MongoClient('mongodb+srv://mostafa:Mo12312300@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-dbname = client['FleetManagementSystem']
-
-# Collections
-users = dbname["User"]
-customers = dbname["Customer"]
-drivers = dbname["Driver"]
-products = dbname["Item"]
-menus = dbname["Menu"]
-businesses = dbname["Business"]
-orders = dbname["Order"]
-business_reviews = dbname["business_reviews"]
-vehicles = dbname["Vehicle"]
+from .udb.mongodb import *
 
 
 # driver status

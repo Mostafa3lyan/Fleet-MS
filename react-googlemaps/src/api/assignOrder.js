@@ -11,10 +11,7 @@ export async function assignOrder () {
         });
         console.log("res", res);
         const data = await res.json();
-        if (res.status === 201) {
-            return true;
-        }
-        return res.error
+        return data
         
 
     } catch(err) {

@@ -6,14 +6,13 @@ import {
     withGoogleMap,
     GoogleMap,
     InfoWindow,
-    Polyline
   } from "react-google-maps";
 import Markers from "../components/Markers";
 import SimDialog from "../components/SimModal";
 import { io } from 'socket.io-client';
 import { assignOrder } from "../api/assignOrder";
 import PolyLines from "../components/Polylines";
-import CustomizedSnackbars from "../components/snackBar";
+import AssignOrderSnackbars from "../components/assignOrdersnackBar";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL, {
   path: process.env.REACT_APP_SOCKET_PATH
@@ -93,12 +92,17 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
   const MapWrapped = withScriptjs(withGoogleMap(Map));
   
   export default function MainMap() {
-    const [open, setOpen] = React.useState(false);
+    const [open, setOpen] = useState(false);
+    const [Message, setMessage] = useState("");
+    const [MessageType, setMessageType] = useState("");
 
     function assignOrderHandler(){
-      console.log("Assigning order handler clicked");
       assignOrder().then((result) => {
+        let keys = Object.keys(result);
+        let message = result[keys[0]];
         if (result){
+          setMessageType(keys[0]);
+          setMessage(message);
           setOpen(true);
         }
         
@@ -121,9 +125,11 @@ const socket = io(process.env.REACT_APP_SOCKET_URL, {
           mapElement={<div style={{ height: `90%` }} />}
         />
       </div>
-      <CustomizedSnackbars
+      <AssignOrderSnackbars
       setOpen={setOpen}
       open={open}
+      message={Message}
+      type={MessageType}
       />
       </div>
     

@@ -7,13 +7,12 @@ import { get_drivers } from "../api/getDrivers";
 import DriverIconRed  from "../icons/driverRed.png";
 import DriverIconOrange  from "../icons/driverOrange.png";
 import DriverIconGreen  from "../icons/driverGreen.png";
-import { Icon } from "@mui/material";
-
+import customerOrder from "../icons/customerOrder.png";
+import buffaloBurger from "../icons/Rest/buffaloBurger.jpg";
   
 export default function Markers({setSelectedMarker, socket}) {
     const [Orders, setOrders] = useState([]);
     const [Restaurants, setRestaurants] = useState([]);
-    const [Drivers, setDrivers] = useState({});
     const [ActiveDrivers, setActiveDrivers] = useState({});
     const [BusyDrivers, setBusyDrivers] = useState({});
     const [NotAvailableDrivers, setNotAvailableDrivers] = useState({});
@@ -53,6 +52,7 @@ export default function Markers({setSelectedMarker, socket}) {
       })
 
       get_restaurants().then(res =>{
+        console.log(res.restaurants);
         setRestaurants(res.restaurants);
       })
 
@@ -81,7 +81,6 @@ export default function Markers({setSelectedMarker, socket}) {
 
 
         })
-        setDrivers(res.drivers);
       })
 
 
@@ -135,8 +134,8 @@ export default function Markers({setSelectedMarker, socket}) {
               // setSelectedMarker(restaurant);
             }}
             icon={{
-              url:  "https://img.icons8.com/fluency/48/kfc-chicken.png",
-              scaledSize: new window.google.maps.Size(30, 30)
+              url:  require(`../icons/Rest/${restaurant.icon}`),
+              scaledSize: new window.google.maps.Size(25, 25)
             }}
           />
         ))
@@ -152,8 +151,8 @@ export default function Markers({setSelectedMarker, socket}) {
               // setSelectedMarker(order);
             }}
             icon={{
-              url:  "https://img.icons8.com/cotton/64/take-away-food.png",
-              scaledSize: new window.google.maps.Size(30, 30)
+              url:  customerOrder,
+              scaledSize: new window.google.maps.Size(25, 25)
             }}
           />
         ))}
@@ -178,20 +177,3 @@ export default function Markers({setSelectedMarker, socket}) {
       </>
     );
   }
-
-  // {ActiveDrivers.map(driver => (
-  //   <Marker
-  //     key={driver.number}
-  //     position={{
-  //       lat: driver.lat,
-  //       lng: driver.lng
-  //     }}
-  //     onClick={() => {
-  //       setSelectedMarker(driver);
-  //     }}
-  //     icon={{
-  //       url:  "https://img.icons8.com/fluency/48/delivery-scooter.png",
-  //       scaledSize: new window.google.maps.Size(30, 30)
-  //     }}
-  //   />
-  // ))}

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import  React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -12,11 +12,14 @@ import Select from '@mui/material/Select';
 import { startSimulation } from '../api/Simulation';
 import FormattedInputs from './IntInput';
 import LinearProgress from '@mui/material/LinearProgress';
+import SimStartedSnackbars from './simsnackBar';
 
 export default function SimDialog({socket}) {
-  const [open, setOpen] = React.useState(false);
-  const [Started, setStarted] = React.useState(false);
-  const [Speed, setSpeed] = React.useState('R');
+  const [open, setOpen] = useState(false);
+  const [Started, setStarted] = useState(false);
+  const [Speed, setSpeed] = useState('R');
+  const [startedSuccess, setStartedSuccess] = useState(false);
+  const [startedSuccessOpen, setStartedSuccessOpen] = useState(false);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -34,6 +37,8 @@ export default function SimDialog({socket}) {
     startSimulation(speed, drivers_number).then((res)=> {
       console.log(res);
       setStarted(false);
+      setStartedSuccess(true);
+      setStartedSuccessOpen(true);
 
     })
   };
@@ -44,6 +49,15 @@ export default function SimDialog({socket}) {
     );
   };
 
+  useEffect(() =>{
+
+    socket.emit("get_sim_status", (status)=>{
+      setStartedSuccess(status);
+    })
+
+
+  }, [socket])
+
 
   return (
     <React.Fragment>
@@ -51,9 +65,26 @@ export default function SimDialog({socket}) {
       <Box sx={{ width: '100%'  }}>
       <LinearProgress />
       </Box> :
-      <Button onClick={handleClickOpen}>
-        start simulation
-      </Button>
+      <>
+      {
+        startedSuccess ? (""):
+        (
+          <Button onClick={handleClickOpen}>
+           start simulation
+          </Button>
+        )
+      }
+      </>
+      }
+      {
+      startedSuccessOpen ?
+      <SimStartedSnackbars
+      setOpen={setStartedSuccessOpen}
+      open={startedSuccessOpen}
+      message={"Started simulation successfully!"}
+      />
+      :
+      <></>
       }
       <Dialog
         fullWidth={true}

@@ -5,7 +5,6 @@ const API_URL = process.env.REACT_APP_API_URL;
 
 
 export async function get_drivers() {
-    console.log("API_URL", API_URL);
     try {
         const res = await fetch(`${API_URL}/map/get_all_drivers`, {
             method: 'GET',

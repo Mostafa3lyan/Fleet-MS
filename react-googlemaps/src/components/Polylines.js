@@ -14,8 +14,6 @@ export default function PolyLines({socket}) {
 
 
     function getPolyLine(obj,color){
-      console.log("polyLine >>>>>>>>>>>> ", obj);
-
       const PolylineArray = [];
       Object.keys(obj).forEach(function(key, index) {
         const polyLine = obj[key];
@@ -71,8 +69,6 @@ export default function PolyLines({socket}) {
       socket.on('removeRedPolylineStep', (driver_num) => {
         setRedPolyLine(PolyLines => {
           if (PolyLines !== undefined){
-
-          console.log("PolyLines >>>> ", PolyLines);
           const Polyline = PolyLines[driver_num];
           if (Polyline !== undefined){
           const NewPolyline = Polyline.slice(1, Polyline.length)
@@ -110,7 +106,8 @@ export default function PolyLines({socket}) {
         {
         typeof RedPolyLine === 'object' && 
         RedPolyLine !== undefined &&
-        Object.keys(BluePolyLine).length > 0 ? 
+        Object.keys(BluePolyLine).length > 0 
+        ? 
         (getPolyLine(BluePolyLine, '#669Df6'))
         :
         ('')
@@ -118,11 +115,13 @@ export default function PolyLines({socket}) {
         {
         typeof RedPolyLine === 'object' && 
         RedPolyLine !== undefined &&
-        Object.keys(BluePolyLine).length > 0 ? 
+        Object.keys(BluePolyLine).length > 0 
+        ? 
         (getPolyLine(RedPolyLine, '#F75D59'))
         :
         ('')
         }
+
       </div>
     );
   }

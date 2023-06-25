@@ -56,7 +56,7 @@ class Simulation:
     #Driver movment before order selection function.
     @classmethod
     def driver_state(cls, driver, num):
-        if int(cls.drivers_num/2) < num:
+        if int(cls.drivers_num/2) < num or cls.drivers_num != 1:
             gen_states = random.choice([cls.states[0], cls.states[2]])
         else:
             gen_states = cls.states[1]
@@ -311,27 +311,24 @@ class Simulation:
     @classmethod
     def get_drivers(cls):
         drivers = drivers_collection.find({"status":{"$in":["busy", "available"]}},{"_id":0})
-        drivers_list = []
-        for driver in drivers:
-            print("\n driver ____ ", driver)
-            if driver.get("next_order", None):
-                print("this should work ")
-            drivers_list.append(driver)
+        drivers_list = [driver for driver in drivers if not driver.get("next_order", None) ]
         return drivers_list
     
     @classmethod
-    def assign_order(cls, order, drivers_list):
+    def _get_best_driver(cls, order, drivers_list):
+        order_location = (order["lat"], order["lng"])
+        restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},{"_id":0})]
+        nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
+        best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
+        return best_driver, nearest_resturent_location
+
+    
+    @classmethod
+    def assign_order(cls, order, best_driver, nearest_resturent_location):
         query = {"assigned":False}
-        projection = {"_id":0,"assigned":0}
         orders_collection.update_one(query,{"$set":{"assigned":True}})
         order_location = (order["lat"], order["lng"])
-
-        restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},projection)]
-        nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
-        
         resturent_to_order_route = cls.create_route(nearest_resturent_location, None, order_location)
-
-        best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
 
         if best_driver["status"] == "available":
             best_driver.update({"order":order})

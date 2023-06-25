@@ -1,22 +1,9 @@
-from django.shortcuts import render
-from ipyleaflet import Map, Marker, Icon, AwesomeIcon, Polyline, WidgetControl
-from ipywidgets import HTML
-import polyline
-import googlemaps
-import time
-import random
 from threading import Thread
-import numpy as np
 from django.views.decorators.csrf import csrf_exempt
 from cmath import *
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-
-from bson.objectid import ObjectId
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from datetime import datetime
 from bson import json_util
 
 
@@ -175,12 +162,21 @@ def assign_order(request):
         
         drivers = Simulation.get_drivers()
         if not drivers :
-            return JsonResponse({"error": "No Drivers Available"}, status=501)
+            return JsonResponse({"error": "No Drivers Available for assigning"}, status=501)
 
-        setRedPolyLine = Thread(target=Simulation.assign_order, args=[order, drivers])
+        best_driver, nearest_resturent_location = Simulation._get_best_driver(order, drivers)
+
+        setRedPolyLine = Thread(target=Simulation.assign_order, args=[
+            order,
+            best_driver,
+            nearest_resturent_location
+            ])
+        
         setRedPolyLine.start()
+        order_name = order.get("name")
+        driver_name = best_driver.get("name")
 
-        return JsonResponse({"success": "Order Assigned Successfuly"}, status=201)
+        return JsonResponse({"success": f"{order_name}'s Order assigned to driver {driver_name} "}, status=201)
 
 
     else:

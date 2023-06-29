@@ -2,25 +2,43 @@ from cmath import *
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from bson import json_util
 from bson.objectid import ObjectId
 from .udb.mongodb import *
 
 
 
+# @csrf_exempt
+# def get_all_customers(request):
+#     if request.method == 'GET':
+#         # Get the document from the MongoDB collection
+#         data = customers.find()
+#         response_data = []
+#         for customer in data:
+#             # Convert the ObjectId to a string
+#             customer['_id'] = str(customer['_id'])
+#             # add the document to the response data list
+#             response_data.append(customer)
+#         return JsonResponse(response_data, safe=False)
+#     else:
+#         return JsonResponse(status=405)
+
+
 @csrf_exempt
 def get_all_customers(request):
     if request.method == 'GET':
-        # Get the document from the MongoDB collection
-        data = customers.find()
+        # Get the documents from the MongoDB collection
+        data = list(customers.find())
         response_data = []
         for customer in data:
             # Convert the ObjectId to a string
             customer['_id'] = str(customer['_id'])
             # add the document to the response data list
             response_data.append(customer)
-        return JsonResponse(response_data, safe=False)
+        return JsonResponse(json_util.dumps(response_data), safe=False)
     else:
-        return JsonResponse(status=405)
+        return JsonResponse({'error': 'Method Not Allowed'}, status=405)
+
 
 
 @csrf_exempt

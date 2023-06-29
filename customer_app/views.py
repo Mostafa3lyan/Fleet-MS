@@ -419,6 +419,7 @@ def checkout(request):
             'total_cost': total_cost,
             'expected_delivery_time': delivery_time.strftime('%Y-%m-%d %H:%M:%S'),
             'business_id': business_id,
+            'ordered_from':'Restaurant'
         }
 
         # Insert the order document into the orders collection
@@ -455,28 +456,6 @@ def calculate_cost(delivery_address, pick_address):
     cost = distance * 5
     return cost
 
-# def calculate_cost(delivery_address, pick_address):
-#     # use Google Maps API to get the latitude and longitude of the addresses
-#     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={delivery_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
-#     response = requests.get(url)
-#     delivery_location = response.json()['results'][0]['geometry']['location']
-#     lat1, lon1 = delivery_location['lat'], delivery_location['lng']
-
-#     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={pick_address}&key=AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
-#     response = requests.get(url)
-#     pick_location = response.json()['results'][0]['geometry']['location']
-#     lat2, lon2 = pick_location['lat'], pick_location['lng']
-
-#     # calculate the distance between the two points using the haversine formula
-#     dlat = math.radians(lat2 - lat1)
-#     dlon = math.radians(lon2 - lon1)
-#     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) \
-#         * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-#     distance = 6371 * c
-
-#     cost = distance * 5
-#     return cost
 
 
 # pick_order function : used if customer want to get order from external business that's not in our database
@@ -516,7 +495,8 @@ def pick_order(request):
                 'delivery_address': delivery_address,
                 'pick_address': pick_address,
                 'delivery_cost': cost,
-                'expected_delivery_time': expected_delivery_time.strftime('%Y-%m-%d %H:%M:%S')
+                'expected_delivery_time': expected_delivery_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'ordered_from':'Market'
             }
 
             # Insert the order document into the orders collection

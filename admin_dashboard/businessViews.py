@@ -5,21 +5,7 @@ import json
 from bson import json_util
 from bson.objectid import ObjectId
 from .udb.mongodb import *
-# import pymongo
 
-# client = pymongo.MongoClient('mongodb+srv://ahmed:2233@fleetmanagementsystem.5xv0klr.mongodb.net/test')
-# dbname = client['FleetManagementSystem']
-
-# # Collections
-# users = dbname["User"]
-# customers = dbname["Customer"]
-# drivers = dbname["Driver"]
-# products = dbname["Item"]
-# menus = dbname["Menu"]
-# businesses = dbname["Business"]
-# orders = dbname["Order"]
-# business_reviews = dbname["business_reviews"]
-# vehicles = dbname["Vehicle"]
 
 
 @csrf_exempt
@@ -156,6 +142,31 @@ def getAllMarket(request):
     else:
         # Return a 405 error for all other HTTP methods
         return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
+@csrf_exempt
+def get_restaurants_orders(request):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the ordered_from "Restaurant"
+        data = list(orders.find({"ordered_from": "Restaurant"}))
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@csrf_exempt
+def get_market_orders(request):
+    if request.method == 'GET':
+        # Get the documents from the MongoDB collection with the ordered_from "Market"
+        data = list(orders.find({"ordered_from": "Market"}))
+        # Convert the ObjectId to a string for each document
+        response_data = [json.loads(json_util.dumps(doc)) for doc in data]
+        return JsonResponse(response_data, safe=False)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 

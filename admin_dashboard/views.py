@@ -51,7 +51,6 @@ def getAll_business_Users(request):
 def getAll_driver_Users(request):
     if request.method == 'GET':
         # Get all user documents with user_type "driver" from the 'User' collection
-        users = dbname["User"]
         data = users.find({"user_type": "driver"})
         # Convert the MongoDB documents to Python dictionaries and add them to a list
         response_data = [user for user in data]

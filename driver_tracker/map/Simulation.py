@@ -36,10 +36,8 @@ class Simulation:
 
         if sim :
             sim_collection.update_one({},{"$set":{"sim_status":True}})
-            print("uppdating sim_status") 
         else:
             sim_collection.insert_one({"sim_status":True})
-            print("createing for fisrst time sim_status") 
         
         for i in range(1, cls.drivers_num+1):
             driver_num = "driver{}_marker".format(i)
@@ -56,10 +54,10 @@ class Simulation:
     #Driver movment before order selection function.
     @classmethod
     def driver_state(cls, driver, num):
-        if int(cls.drivers_num/2) < num or cls.drivers_num != 1:
-            gen_states = random.choice([cls.states[0], cls.states[2]])
-        else:
+        if int(cls.drivers_num/2) > num or cls.drivers_num == 1:
             gen_states = cls.states[1]
+        else:
+            gen_states = random.choice([cls.states[0], cls.states[2]])
             
         destination = cls.generate_random_location()
         route = cls.create_route(driver, None, destination)
@@ -302,10 +300,8 @@ class Simulation:
     @classmethod
     def get_order(cls):
         query = {"assigned":False}
-        projection = {"_id":0,"assigned":0}
+        projection = {"_id":0}
         order = orders_collection.find_one(query, projection)
-        
-        orders_collection.update_many({"assigned":True}, {"$set":{"assigned":False}})
         return order
 
     @classmethod
@@ -376,7 +372,6 @@ class Simulation:
         current_location = (driver.get("lat"), driver.get("lng"))
         time_left = cls.get_distance_time(current_location, current_destination)
         time_between_distinations = cls.get_distance_time(current_destination, next_destination)
-        print("busy driver_time", time_left + time_between_distinations)
         return time_left + time_between_distinations
     
     
@@ -384,7 +379,6 @@ class Simulation:
     def get_available_driver_time(cls, driver, destination):
         current_location = (driver.get("lat"), driver.get("lng"))
         time_left = cls.get_distance_time(current_location, destination)
-        print("availble driver_time", time_left)
         return time_left
 
 

@@ -165,8 +165,32 @@ def view_orders_history(request, customer_id):
         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+from django.core.serializers.json import DjangoJSONEncoder
 
+# @csrf_exempt
+# def browse_menus(request):
+#     if request.method == 'GET':
+#         pipeline = [
+#             {
+#                 '$lookup': {
+#                     'from': 'Item',
+#                     'localField': 'items',
+#                     'foreignField': '_id',
+#                     'as': 'items'
+#                 }
+#             },
+#             {
+#                 '$project': {
+#                     'items._id': 0,
+#                     'items.__v': 0
+#                 }
+#             }
+#         ]
 
+#         menu_list = list(menus.aggregate(pipeline))
+#         return JsonResponse({"menu_list": json_util.dumps(menu_list)}, encoder=DjangoJSONEncoder)
+#     else:
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 @csrf_exempt
@@ -174,10 +198,30 @@ def browse_menus(request):
     if request.method == 'GET':
         menu_list = []
         for menu in menus.find():
-            menu_list.append(json_util.loads(json_util.dumps(menu)))
+            menu_data = json_util.loads(json_util.dumps(menu))
+            item_list = []
+            for item_id in menu_data['items']:
+                item = products.find_one({"_id": ObjectId(item_id)})
+                if item:
+                    item_data = json_util.loads(json_util.dumps(item))
+                    item_list.append(item_data)
+            menu_data['items'] = item_list
+            menu_list.append(menu_data)
         return JsonResponse({"menu_list": json_util.dumps(menu_list)})
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+# @csrf_exempt
+# def browse_menus(request):
+#     if request.method == 'GET':
+#         menu_list = []
+#         for menu in menus.find():
+#             menu_list.append(json_util.loads(json_util.dumps(menu)))
+#         return JsonResponse({"menu_list": json_util.dumps(menu_list)})
+#     else:
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 def get_product_details(request, menu_id):

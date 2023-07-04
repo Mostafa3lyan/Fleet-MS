@@ -7,8 +7,9 @@ from bson.objectid import ObjectId
 import gridfs
 from PIL import Image
 import io
+import base64
+from django.conf import settings
 from .udb.mongodb import *
-
 fs = gridfs.GridFS(dbname)
 
 
@@ -96,24 +97,6 @@ def get_business(request, business_id):
         return JsonResponse(json_util.dumps(document_dict), safe=False)
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
-# @csrf_exempt
-# def get_business(request, business_id):
-#     if request.method == 'GET':
-#         # Get the document from the MongoDB collection
-#         business = businesses.find_one({'_id': ObjectId(business_id)})
-#         if not business:
-#             return JsonResponse({'error': 'business not found'})
-#         # Convert the ObjectId to a string
-#         document_dict = dict(business)
-#         document_dict['id'] = str(document_dict['_id'])
-#         # Remove the ObjectId from the document
-#         del document_dict['_id']
-#         # Return a JSON response with the document data
-#         return JsonResponse(json_util.dumps(document_dict), safe=False)
-#     else:
-#         return JsonResponse(status=405)
-
 
 
 
@@ -306,19 +289,50 @@ def add_item(request,business_id):
     
     
 
+# @csrf_exempt
+# def get_item(request, item_id):
+#     if request.method == 'GET':
+#         item = items.find_one({"_id": ObjectId(item_id)})
+
+#         if item:
+#             image_id = item.get("image_id")
+#             if image_id:
+#                 # Get the image associated with the item
+#                 image = fs.get(ObjectId(image_id)).read()
+#                 # Generate the image URL
+#                 image_url = f"{settings.BASE_URL}/images/{item_id}"
+#                 # Add the image URL to the item document
+#                 item["image"] = image_url
+
+#             return JsonResponse(json_util.dumps(item), safe=False)
+#         else:
+#             return JsonResponse({'error': 'Item not found'})
+#     else:
+#         return JsonResponse({'error': 'Method not allowed'})
+    
 
 @csrf_exempt
 def get_item(request, item_id):
     if request.method == 'GET':
         item = items.find_one({"_id": ObjectId(item_id)})
-        image = fs.get(item.image_id)
         
         if item:
-            return JsonResponse(json.loads(json_util.dumps(item)), safe=False)
+            image_id = item.get("image_id")
+            if image_id:
+                # Get the image associated with the item
+                image = fs.get(ObjectId(image_id)).read()
+                # Convert the image bytes to base64 encoding
+                image_base64 = base64.b64encode(image).decode("utf-8")
+                # Add the base64-encoded image data to the item document
+                item["image"] = image_base64
+            
+            return JsonResponse(json_util.dumps(item), safe=False)
         else:
             return JsonResponse({'error': 'Item not found'})
     else:
         return JsonResponse({'error': 'Method not allowed'})
+
+
 
 @csrf_exempt
 def edit_item(request, item_id):
@@ -402,40 +416,7 @@ def confirm_order(request, order_id):
     return JsonResponse({"message": "Invalid request method"}, status=400)
 
 
-# def assign_order_to_nearest_driver(business_id, order_id):
-#     business = businesses.find_one({"_id": ObjectId(business_id)})
-#     business_location = (business['latitude'], business['longitude'])
 
-#     drivers_locations = []
-#     for driver in drivers.find({"status": "available"}):
-#         drivers_locations.append((driver['latitude'], driver['longitude']))
-
-#     if not drivers_locations:
-#         return HttpResponse("No available drivers found.")
-
-#     closest_driver_location = min(drivers_locations, key=lambda loc: haversine(business_location, loc))
-
-#     driver = drivers.find_one_and_update(
-#         {"latitude": closest_driver_location[0], "longitude": closest_driver_location[1], "status": "available"},
-#         {"$set": {"status": "unavailable"}}
-#     )
-
-#     if not driver:
-#         return HttpResponse("Unable to assign order to a driver.")
-
-#     orders.update_one({"_id": ObjectId(order_id)}, {"$set": {"driver_id": driver['_id']}})
-
-#     return HttpResponse(f"Order assigned to driver {driver['_id']}.")
-
-# def haversine(point1, point2):
-#     # Calculate the great circle distance between two points on the earth (in km)
-#     lat1, lon1 = point1
-#     lat2, lon2 = point2
-#     dlat = math.radians(lat2 - lat1)
-#     dlon = math.radians(lon2 - lon1)
-#     a = sin(dlat / 2) ** 2 + cos(math.radians(lat1)) * cos(math.radians(lat2)) * sin(dlon / 2) ** 2
-#     c = 2 * math.atan2(sqrt(a), sqrt(1 - a))
-#     return 6371 * c  # Earth radius is 6371 km
 
 
 # def confirm_order(order_id):
@@ -597,4 +578,3 @@ def add_comment_to_review(request):
     
     
 
-#track driver

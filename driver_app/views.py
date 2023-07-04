@@ -24,8 +24,9 @@ def create_driver(request):
         phone = data.get('phone')
         licence_id = data.get('licence_id')
         email = data.get('email')
-        address = data.get('address')
         password = data.get('password')
+        address = data.get('address')
+        
 
         # Check if any of the fields are missing
         if not all([first_name, last_name, phone, licence_id, email, address, password]):

@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from bson import json_util
+from bson.json_util import dumps
 from bson.objectid import ObjectId
 from .udb.mongodb import *
 
@@ -54,7 +55,7 @@ def getCustomer(request, customer_id):
         # Remove the ObjectId from the document
         del document_dict['_id']
         # Return a JSON response with the document data
-        return JsonResponse(document_dict, safe=False)
+        return JsonResponse(dumps(document_dict), safe=False)
     else:
         return JsonResponse(status=405)
 

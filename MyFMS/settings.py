@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'business_app.apps.BusinessAppConfig',
     'rest_framework',
     'corsheaders',
+    "map",
+
    # 'mongo_auth',
     
 ]

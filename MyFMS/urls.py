@@ -10,6 +10,7 @@ urlpatterns = [
     path('customer/', include("customer_app.urls")),
     path('business/', include("business_app.urls")),
     path('driver/', include("driver_app.urls")),
+    path('map/', include('map.urls'))
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

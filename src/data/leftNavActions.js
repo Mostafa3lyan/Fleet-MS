@@ -1,6 +1,6 @@
 const leftNavActions = [
   {
-    link: '/' , 
+    link: '/map' , 
     listAction : 'Map View' , 
     icon : 'fa-solid fa-map-location-dot'
   } ,

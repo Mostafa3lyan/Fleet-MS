@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import Home from "./pages/Home/Home";
+import Map from "./pages/Map/Map";
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 import MainNavigation from "./pages/MainNavigation/MainNavigation";
 import LoginPage from "./pages/LoginPage/LoginPage";
@@ -91,6 +92,7 @@ function App() {
       element: <MainNavigation />,
       children: [
         { path: "", element: <Home /> },
+        { path: "/map", element: <Map /> },
         { path: "/addBuisness", element: <AddBuisness /> },
         { path: "/buisness", element: <Buisness /> },
         { path: "/buisness/:id", element: <SingleBuisness /> },

@@ -356,10 +356,13 @@ def view_cart(request):
     if request.method == 'GET':
         data = json.loads(request.body)
         customer_id = data.get('customer_id')
-        # Find the user document with the given username
+        if not customer_id:
+            return JsonResponse({'success': False, 'error': 'No customer_id provided'})
+
+        # Find the customer document with the given customer_id
         customer = customers.find_one({'_id': ObjectId(customer_id)})
         if not customer:
-            return JsonResponse({'success': False})
+            return JsonResponse({'success': False, 'error': 'Customer not found'})
 
         # Get the cart items
         cart = customer.get('cart', [])
@@ -367,14 +370,23 @@ def view_cart(request):
         # Get the product details for each cart item
         products_details = []
         for item in cart:
-            product_id = item['product_id']
-            quantity = item['quantity']
-            product = products.find_one({'_id': product_id})
-            if product:
-                products_details.append({'product_id': str(product_id), 'title': product['title'], 'price': product['price'],
-                                         'image': product['image'], 'description': product['description'],
-                                         'category': product['category'], 'quantity': quantity})
+            product_id = item.get('product_id')
+            quantity = item.get('quantity')
+            if product_id:
+                product = products.find_one({'_id': ObjectId(product_id)})
+                if product:
+                    products_details.append({
+                        'product_id': str(product_id),
+                        'title': product.get('title'),
+                        'price': product.get('price'),
+                        'description': product.get('description'),
+                        'category': product.get('category'),
+                        'quantity': quantity
+                    })
+
         return JsonResponse(products_details, safe=False)
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
 @csrf_exempt

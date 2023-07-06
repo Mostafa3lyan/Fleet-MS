@@ -134,7 +134,7 @@ export default function Markers({setSelectedMarker, socket}) {
               // setSelectedMarker(restaurant);
             }}
             icon={{
-              url:  import(`../icons/Rest/${restaurant.icon}`),
+              url:  new URL(`../icons/Rest/${restaurant.icon}`, import.meta.url).href,
               scaledSize: new window.google.maps.Size(25, 25)
             }}
           />

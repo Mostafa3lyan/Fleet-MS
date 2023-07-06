@@ -10,6 +10,7 @@ import asyncio
 from multiprocessing import Process
 from .variables import arabic_male_names
 from utils.mongo_connection import drivers_collection, orders_collection, restaurant_collection, sim_collection
+from bson.objectid import ObjectId
 
 
 gkey = 'AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
@@ -88,7 +89,7 @@ class Simulation:
             return driver, None
         
     @classmethod
-    def run_driver(cls, route, driver_obj, polyline=None):
+    def run_driver(cls, route, driver_obj, polyline=None, order_id=None):
         driver_num = driver_obj["number"]
         cls.update_driver_status(driver_num, "busy")
         set_driver = Process(target=cls.socket_send, args=("setBusyDriver",{driver_num:driver_obj}))
@@ -113,6 +114,8 @@ class Simulation:
         if polyline :
             if polyline == "red":
                 return
+        if order_id :
+            orders_collection.update_one({"order_id": ObjectId(order_id)}, {"$set": {"status": "delivered"}})
         driver_obj = drivers_collection.find_one({"number":driver_num}, {"_id":0})
         if next_order or  driver_obj.get("next_resturent_location"):
             order_location = (next_order["lat"], next_order["lng"])
@@ -137,7 +140,7 @@ class Simulation:
 
 
             cls.run_driver(restaurent_route, driver_obj, polyline="red")
-            cls.run_driver(next_route, driver_obj, polyline="blue")
+            cls.run_driver(next_route, driver_obj, polyline="blue", order_id=next_order["_id"])
 
         cls.update_driver_status(driver_num, "available")
         setActiveDriver = Process(target=cls.socket_send, args=("setActiveDriver",{driver_num:driver_obj}))
@@ -299,8 +302,8 @@ class Simulation:
 
     @classmethod
     def get_order(cls):
-        query = {"assigned":False}
-        projection = {"_id":0}
+        query = {"status":"pending", "lat": {"$exists": True}}
+        projection = {'delivery_address': 1, 'status': 1, 'lat': 1, 'lng': 1}
         order = orders_collection.find_one(query, projection)
         return order
 
@@ -313,7 +316,7 @@ class Simulation:
     @classmethod
     def _get_best_driver(cls, order, drivers_list):
         order_location = (order["lat"], order["lng"])
-        restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},{"_id":0})]
+        restaurant_coordinates_list = [(restaurant["lat"], restaurant["lng"]) for restaurant in restaurant_collection.find({},{"_id":0}) if restaurant.get("lat")]
         nearest_resturent_location = cls.get_nearest_location(order_location, restaurant_coordinates_list)
         best_driver = cls.get_best_driver(nearest_resturent_location, drivers_list)
         return best_driver, nearest_resturent_location
@@ -321,10 +324,13 @@ class Simulation:
     
     @classmethod
     def assign_order(cls, order, best_driver, nearest_resturent_location):
-        query = {"assigned":False}
-        orders_collection.update_one(query,{"$set":{"assigned":True}})
+        query = {"status":"pending", "lat": {"$exists": True}}
+        orders_collection.update_one(query,{"$set":{"status":"in_transit"}})
         order_location = (order["lat"], order["lng"])
         resturent_to_order_route = cls.create_route(nearest_resturent_location, None, order_location)
+
+        order_id = order.pop("_id")
+        order["_id"] = str(order_id)
 
         if best_driver["status"] == "available":
             best_driver.update({"order":order})
@@ -343,7 +349,7 @@ class Simulation:
             removeAvailbleMarker.start()
 
             cls.run_driver(driver_to_resturent_route, best_driver, polyline="red")
-            cls.run_driver(resturent_to_order_route, best_driver, polyline="blue")
+            cls.run_driver(resturent_to_order_route, best_driver, polyline="blue", order_id=order["_id"])
         elif best_driver["status"] == "busy":
             best_driver.update({"next_order":order})
             best_driver.update({"next_resturent_location":nearest_resturent_location})

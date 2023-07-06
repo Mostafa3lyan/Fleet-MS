@@ -5,11 +5,16 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from bson import json_util
-
+import googlemaps
 
 from utils.mongo_connection import orders_collection, restaurant_collection , drivers_collection
 from .Simulation import Simulation
 
+
+
+city_center =(30.1491, 31.6290)
+gkey = 'AIzaSyAv4TshMqyQUcBc_oWM6w9hjlxIKqiUOvA'
+gmaps = googlemaps.Client(key= gkey)
 
 
 # Create your views here.
@@ -47,8 +52,18 @@ def create_order(request):
 @csrf_exempt
 def get_all_orders(request):
     if request.method == 'GET':
-        order = list(orders_collection.find({}))
-        orders_json = json.loads(json_util.dumps(order))
+        orders_list = list()
+        for order in orders_collection.find({}, {'delivery_address': 1, 'status': 1, 'lat': 1, 'lng': 1}):
+            try:
+                user_result = gmaps.places(query=order.get("delivery_address"), location=city_center, radius=6000)
+                user_L= user_result['results'][0]['geometry']['location']
+                order["lat"], order["lng"] = user_L['lat'], user_L['lng']
+                orders_collection.update_one({"_id": order["_id"]}, {"$set": {"lat": order["lat"],"lng": order["lng"]}})
+                orders_list.append(order)
+            except:
+                pass
+            
+        orders_json = json.loads(json_util.dumps(orders_list))
         return JsonResponse({'orders': orders_json})
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
@@ -81,14 +96,42 @@ def create_restaurant(request):
 
 
 
+# @csrf_exempt
+# def get_all_restaurant(request):
+#     if request.method == 'GET':
+#         restaurant = list(restaurant_collection.find({}))
+#         restaurants_json = json.loads(json_util.dumps(restaurant))
+#         return JsonResponse({'restaurants': restaurants_json})
+#     else:
+#         return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
+
+
 @csrf_exempt
 def get_all_restaurant(request):
     if request.method == 'GET':
-        restaurant = list(restaurant_collection.find({}))
-        restaurants_json = json.loads(json_util.dumps(restaurant))
+        restaurant_list = list()
+        for restaurant in restaurant_collection.find({}, {'name': 1, 'address': 1, 'lat': 1, 'lng': 1, 'icon': 1}):
+            try:
+                user_result = gmaps.places(query=restaurant.get("address"), location=city_center, radius=6000)
+                user_L= user_result['results'][0]['geometry']['location']
+                restaurant["lat"], restaurant["lng"] = user_L['lat'], user_L['lng']
+                restaurant_collection.update_one({"_id": restaurant["_id"]}, {"$set": {"lat": restaurant["lat"],"lng": restaurant["lng"]}})
+                restaurant_list.append(restaurant)
+            except:
+                pass
+        restaurants_json = json.loads(json_util.dumps(restaurant_list))
         return JsonResponse({'restaurants': restaurants_json})
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
+
+
+
 
 
 @csrf_exempt

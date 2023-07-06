@@ -1,5 +1,5 @@
 import pymongo
-MONGO_DETAILS = "mongodb://localhost:27017"
+MONGO_DETAILS = 'mongodb+srv://ahmed:2233@fleetmanagementsystem.5xv0klr.mongodb.net/test'
 
 client = pymongo.MongoClient('mongodb+srv://ahmed:2233@fleetmanagementsystem.5xv0klr.mongodb.net/test')
 dbname = client['FleetManagementSystem']

@@ -33,4 +33,8 @@ async def disconnect(sid):
 
 @sio.event
 def get_sim_status(sid):
-    return sim_collection.find_one({})["sim_status"] 
+    sim_status = False
+    sim = sim_collection.find_one({})
+    if sim :
+        sim_status = sim.get("sim_status")
+    return sim_status

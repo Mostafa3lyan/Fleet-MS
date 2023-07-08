@@ -177,7 +177,7 @@ def start_simulation(request):
     if request.method == 'POST':
         # Get the request data
         data = json.loads(request.body)
-        speed_dict = {"S":10, "R":1, "F":0.01}
+        speed_dict = {"S":1, "R":0.1, "F":0.001}
         speed = data.get('speed')
         drivers_number = data.get('drivers_number')
         speed_float = speed_dict.get(speed.upper())

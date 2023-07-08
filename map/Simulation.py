@@ -21,7 +21,7 @@ class Simulation:
     center_lon = 31.6290
     radius = 6000
     drivers_num = 10
-    speed = 0.01
+    speed = 0.001
     states = ['busy', 'available', 'not_available']
     drivers_threads = {}
     drivers = []
@@ -91,6 +91,7 @@ class Simulation:
     @classmethod
     def run_driver(cls, route, driver_obj, polyline=None, order_id=None):
         driver_num = driver_obj["number"]
+        driver_obj.update({"status":"busy"})
         cls.update_driver_status(driver_num, "busy")
         set_driver = Process(target=cls.socket_send, args=("setBusyDriver",{driver_num:driver_obj}))
         set_driver.start() 
@@ -115,7 +116,7 @@ class Simulation:
             if polyline == "red":
                 return
         if order_id :
-            orders_collection.update_one({"order_id": ObjectId(order_id)}, {"$set": {"status": "delivered"}})
+            orders_collection.update_one({"_id": ObjectId(order_id)}, {"$set": {"status": "delivered"}})
         driver_obj = drivers_collection.find_one({"number":driver_num}, {"_id":0})
         if next_order or  driver_obj.get("next_resturent_location"):
             order_location = (next_order["lat"], next_order["lng"])
@@ -142,6 +143,9 @@ class Simulation:
             cls.run_driver(restaurent_route, driver_obj, polyline="red")
             cls.run_driver(next_route, driver_obj, polyline="blue", order_id=next_order["_id"])
 
+        order = driver_obj["order"]
+        order["status"] = "delivered"
+        driver_obj.update({"status" : "available", "order" : order})
         cls.update_driver_status(driver_num, "available")
         setActiveDriver = Process(target=cls.socket_send, args=("setActiveDriver",{driver_num:driver_obj}))
         setActiveDriver.start()
@@ -292,8 +296,9 @@ class Simulation:
     @classmethod
     def generate_random_order(cls, location, gen_states):
         if gen_states == "busy" : return {
-            "address": "random address",
-            "detail": "random details",
+            "delivery_address": "random address",
+            "status": "in transit",
+            "total_cost": 100,
             "lat": location[0],
             "lng": location[1],
         }
@@ -302,8 +307,10 @@ class Simulation:
 
     @classmethod
     def get_order(cls):
-        query = {"status":"pending", "lat": {"$exists": True}}
-        projection = {'delivery_address': 1, 'status': 1, 'lat': 1, 'lng': 1}
+        # orders_collection.update_many({},{"$set":{"status":"confirmed"}})
+        # return False
+        query = {"status":"confirmed", "lat": {"$exists": True}}
+        projection = {'delivery_address': 1, 'status': 1, "total_cost":1, 'lat': 1, 'lng': 1}
         order = orders_collection.find_one(query, projection)
         return order
 
@@ -324,14 +331,14 @@ class Simulation:
     
     @classmethod
     def assign_order(cls, order, best_driver, nearest_resturent_location):
-        query = {"status":"pending", "lat": {"$exists": True}}
-        orders_collection.update_one(query,{"$set":{"status":"in_transit"}})
+        query = {"status":"confirmed", "lat": {"$exists": True}}
+        orders_collection.update_one(query,{"$set":{"status":"in transit"}})
+        order.update({"status":"in transit"})
         order_location = (order["lat"], order["lng"])
         resturent_to_order_route = cls.create_route(nearest_resturent_location, None, order_location)
 
         order_id = order.pop("_id")
         order["_id"] = str(order_id)
-
         if best_driver["status"] == "available":
             best_driver.update({"order":order})
             cls.update_driver(best_driver)

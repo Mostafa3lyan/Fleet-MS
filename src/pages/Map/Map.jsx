@@ -57,6 +57,7 @@ const socket = io(SOCKET_URL, {path: SOCKET_PATH});
         onClick={ev => {
           console.log("latitide = ",  ev.latLng.lat());
           console.log("longitude = ", ev.latLng.lng());
+          setSelectedMarker(null);
         }}
       >
         <Markers 
@@ -78,9 +79,19 @@ const socket = io(SOCKET_URL, {path: SOCKET_PATH});
             }}
           >
             <div>
-              <h2>{selectedMarker.name}</h2>
-              <h3>{selectedMarker.status}</h3>
-              <p>{selectedMarker.order.details}</p>
+            <span><strong>Driver name: </strong>{selectedMarker.name}</span>
+              <br/>
+              <span><strong>Driver status: </strong> {selectedMarker.status}</span>
+              <br/>
+              {selectedMarker.order.delivery_address !== undefined ? (
+              <>
+                <span><strong>Delivery address: </strong>{selectedMarker.order.delivery_address}</span>
+                <br/>
+                <span><strong>Delivery status: </strong>{selectedMarker.order.status}</span>
+                <br/>
+                <span><strong>Total cost: </strong> {selectedMarker.order.total_cost}</span>
+                </>
+              ):('')}
             </div>
           </InfoWindow>
         )}
